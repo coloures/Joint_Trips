@@ -1,5 +1,5 @@
 <template>
-  <GridLayout columns="auto, *" class="travel-card bg-white rounded-2xl p-4 mb-3" @tap="onTap">
+  <GridLayout columns="auto, *" class="bg-white rounded-2xl p-4 mb-3" @tap="onTap">
     <Label col="0" :text="icon" class="text-4xl mr-3" />
 
     <StackLayout col="1" class="flex-1">
