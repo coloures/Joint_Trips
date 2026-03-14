@@ -1,4 +1,3 @@
-// stores/trip.ts
 import { defineStore } from 'pinia'
 import { ref } from 'nativescript-vue'
 import type { Trip } from '~/models/trip'
