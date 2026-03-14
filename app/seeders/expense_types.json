@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Accommodation",
+    "icon": "🏨",
+    "color": "#3B82F6"
+  },
+  {
+    "id": 2,
+    "name": "Food & Drinks",
+    "icon": "🍽️",
+    "color": "#10B981"
+  },
+  {
+    "id": 3,
+    "name": "Transport",
+    "icon": "🚗",
+    "color": "#F59E0B"
+  },
+  {
+    "id": 4,
+    "name": "Entertainment",
+    "icon": "🎭",
+    "color": "#8B5CF6"
+  },
+  {
+    "id": 5,
+    "name": "Shopping",
+    "icon": "🛍️",
+    "color": "#EC4899"
+  }
+]

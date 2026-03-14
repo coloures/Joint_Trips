@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "expense_id": 1,
+    "user_id": 1,
+    "amount": 7500,
+    "isPaid": true
+  },
+  {
+    "id": 2,
+    "expense_id": 1,
+    "user_id": 2,
+    "amount": 7500,
+    "isPaid": false
+  },
+  {
+    "id": 3,
+    "expense_id": 2,
+    "user_id": 1,
+    "amount": 1750,
+    "isPaid": true
+  },
+  {
+    "id": 4,
+    "expense_id": 2,
+    "user_id": 2,
+    "amount": 1750,
+    "isPaid": true
+  },
+  {
+    "id": 5,
+    "expense_id": 3,
+    "user_id": 2,
+    "amount": 45000,
+    "isPaid": false
+  }
+]

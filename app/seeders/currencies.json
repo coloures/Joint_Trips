@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "code": "RUB",
+    "name": "Russian Ruble",
+    "symbol": "₽"
+  },
+  {
+    "id": 2,
+    "code": "USD",
+    "name": "US Dollar",
+    "symbol": "$"
+  },
+  {
+    "id": 3,
+    "code": "EUR",
+    "name": "Euro",
+    "symbol": "€"
+  },
+  {
+    "id": 4,
+    "code": "TRY",
+    "name": "Turkish Lira",
+    "symbol": "₺"
+  },
+  {
+    "id": 5,
+    "code": "GEL",
+    "name": "Georgian Lari",
+    "symbol": "₾"
+  }
+]

@@ -1,18 +1,61 @@
 [
   {
-    "id" : 1,
-    "icon": "🏖️",
-    "title": "Отпуск на море",
-    "participants": 5,
-    "startDate": "2026-06-10",
-    "endDate": "2026-06-20"
+    "emoji": "🏔️",
+    "id": 1,
+    "creator_id": 1,
+    "title": "Кавказские горы",
+    "country": "Russia",
+    "startDate": "2026-07-10",
+    "endDate": "2026-07-20",
+    "currency_id": 1,
+    "budget": 75000,
+    "description": "Трекинг и кемпинг в горах"
   },
   {
-    "id" : 2,
-    "icon": "🏔️",
-    "title": "Поход в горы",
-    "participants": 2,
-    "startDate": "2026-07-01",
-    "endDate": "2026-07-10"
+    "emoji": "🏖️",
+    "id": 2,
+    "creator_id": 2,
+    "title": "Отдых в Анталье",
+    "country": "Turkey",
+    "startDate": "2026-08-01",
+    "endDate": "2026-08-10",
+    "currency_id": 4,
+    "budget": 120000,
+    "description": null
+  },
+  {
+    "emoji": "🗼",
+    "id": 3,
+    "creator_id": 1,
+    "title": "Европейский тур",
+    "country": "France",
+    "startDate": "2026-09-15",
+    "endDate": "2026-09-25",
+    "currency_id": 3,
+    "budget": 250000,
+    "description": "Париж, Барселона, Рим"
+  },
+  {
+    "emoji": "🏯",
+    "id": 4,
+    "creator_id": 4,
+    "title": "Япония: сакура",
+    "country": "Japan",
+    "startDate": "2027-03-20",
+    "endDate": "2027-04-05",
+    "currency_id": 2,
+    "budget": 450000
+  },
+  {
+    "emoji": "🏜️",
+    "id": 5,
+    "creator_id": 3,
+    "title": "Пустыня Сахара",
+    "country": "Morocco",
+    "startDate": "2026-11-01",
+    "endDate": "2026-11-12",
+    "currency_id": 5,
+    "budget": 95000,
+    "description": "Экспедиция с гидами"
   }
 ]

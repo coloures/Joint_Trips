@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "trip_id": 1,
+    "user_id_pay": 1,
+    "amount": 15000,
+    "date": "2026-07-11",
+    "type_of_expense": 1,
+    "description": "Бронь домика в горах"
+  },
+  {
+    "id": 2,
+    "trip_id": 1,
+    "user_id_pay": 2,
+    "amount": 3500,
+    "date": "2026-07-12",
+    "type_of_expense": 2,
+    "description": "Продукты на ужин"
+  },
+  {
+    "id": 3,
+    "trip_id": 2,
+    "user_id_pay": 2,
+    "amount": 45000,
+    "date": "2026-08-02",
+    "type_of_expense": 1,
+    "description": "Отель all-inclusive"
+  },
+  {
+    "id": 4,
+    "trip_id": 3,
+    "user_id_pay": 1,
+    "amount": 8900,
+    "date": "2026-09-16",
+    "type_of_expense": 3,
+    "description": "Билеты на поезд Париж-Барселона"
+  },
+  {
+    "id": 5,
+    "trip_id": 3,
+    "user_id_pay": 4,
+    "amount": 12500,
+    "date": "2026-09-18",
+    "type_of_expense": 4,
+    "description": "Экскурсия в Лувр"
+  }
+]
