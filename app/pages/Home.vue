@@ -23,12 +23,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'nativescript-vue'
+import { ref, computed, $navigateTo } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import CardTrip from '../components/UI/CardTrip.vue'
 import CardDebt from '../components/UI/CardDebt.vue'
 import CardNotification from '~/components/UI/CardNotification.vue'
+import TripDetails from './TripDetails.vue'
 
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
@@ -50,7 +51,11 @@ const getParticipantsCount = (tripId) => {
 }
 
 const onCardTrip = (item) => {
-  console.log('Нажата карточка', item.title)
+  $navigateTo(TripDetails, {
+    props: {
+      tripId: item.id
+    }
+  })
 }
 
 const onCardDept = () => {
