@@ -8,50 +8,56 @@
         </GridLayout>
 
         <CardTrip 
-          v-for="(item, index) in items" 
-          :key="index" 
-          :icon="item.icon" 
+          v-for="item in items" 
+          :key="item.id" 
+          :icon="item.emoji" 
           :title="item.title" 
-          :participants="item.participants" 
+          :participants="getParticipantsCount(item.id)" 
           :startDate="item.startDate" 
           :endDate="item.endDate" 
-          @tap="onCardTrip"
+          @tap="() => onCardTrip(item)"
         />
       </StackLayout>
     </ScrollView>
   </Page>
 </template>
 
-<script>
-import items from '../seeders/items.json'
+<script setup>
+import { ref, computed } from 'nativescript-vue'
+import { useTripStore } from '~/stores/tripStore'
+import { useTripMemberStore } from '~/stores/tripMemberStore'
 import CardTrip from '../components/UI/CardTrip.vue'
 import CardDebt from '../components/UI/CardDebt.vue'
-import CardNotification from '~/components/UI/CardNotification.vue';
+import CardNotification from '~/components/UI/CardNotification.vue'
 
-export default {
-  name: 'Home',
-  components: {
-    CardTrip,
-    CardDebt,
-    CardNotification
-  },
-  data() {
-    return {
-      items,
-      debtAmount: 12000,
-      notificationCount: 3
-    }
-  },
-  methods: {
-    onCardTrip(title) {
-      console.log('Нажата карточка', title)
-    },
-    onCardDept(dept) {
-      console.log('У вас долг: ', dept, ' рублей.')
-    },
-    onCardNotification(notificationCount) {
-      console.log('Количество уведомлений: ', notificationCount)
-    }
-  }
+const tripStore = useTripStore()
+const tripMemberStore = useTripMemberStore()
+
+const debtAmount = ref(12000)
+const notificationCount = ref(3)
+const member_id = ref(2)
+
+const items = computed(() => {
+  const memberTrips = tripMemberStore.getTripMembersByMemberId(member_id.value)
+  return memberTrips
+    .map(member => tripStore.getTripById(member.trip_id))
+    .filter(trip => trip !== null)
+})
+
+const getParticipantsCount = (tripId) => {
+  const members = tripMemberStore.getTripMembersByTripId(tripId)
+  return Array.isArray(members) ? members.length-1 : 0
+}
+
+const onCardTrip = (item) => {
+  console.log('Нажата карточка', item.title)
+}
+
+const onCardDept = () => {
+  console.log('У вас долг:', debtAmount.value, 'рублей.')
+}
+
+const onCardNotification = () => {
+  console.log('Количество уведомлений:', notificationCount.value)
 }
 </script>
