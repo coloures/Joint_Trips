@@ -6,7 +6,8 @@
     "amount": 15000,
     "date": "2026-07-11",
     "type_of_expense": 1,
-    "description": "Бронь домика в горах"
+    "description": "Бронь домика в горах",
+    "currency_id" : 1
   },
   {
     "id": 2,
@@ -15,7 +16,8 @@
     "amount": 3500,
     "date": "2026-07-12",
     "type_of_expense": 2,
-    "description": "Продукты на ужин"
+    "description": "Продукты на ужин",
+    "currency_id" : 1
   },
   {
     "id": 3,
@@ -24,7 +26,8 @@
     "amount": 45000,
     "date": "2026-08-02",
     "type_of_expense": 1,
-    "description": "Отель all-inclusive"
+    "description": "Отель all-inclusive",
+    "currency_id" : 1
   },
   {
     "id": 4,
@@ -33,7 +36,8 @@
     "amount": 8900,
     "date": "2026-09-16",
     "type_of_expense": 3,
-    "description": "Билеты на поезд Париж-Барселона"
+    "description": "Билеты на поезд Париж-Барселона",
+    "currency_id" : 1
   },
   {
     "id": 5,
@@ -42,6 +46,7 @@
     "amount": 12500,
     "date": "2026-09-18",
     "type_of_expense": 4,
-    "description": "Экскурсия в Лувр"
+    "description": "Экскурсия в Лувр",
+    "currency_id" : 1
   }
 ]
