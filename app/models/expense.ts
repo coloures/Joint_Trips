@@ -5,5 +5,6 @@ export interface Expense {
   amount: number
   date: string
   type_of_expense: number,
-  description: string
+  description: string,
+  currency_id : number
 }

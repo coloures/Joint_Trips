@@ -38,9 +38,9 @@ export default {
   computed: {
     participantsText() {
       if (this.participants === 0) return 'Вы один'
-      if (this.participants === 1) return '1 человек участвует'
-      if (this.participants < 5) return `${this.participants} человека участвуют`
-      return `${this.participants} человек участвуют`
+      if (this.participants === 1) return 'Ещё 1 человек участвует'
+      if (this.participants < 5) return `Ещё ${this.participants} человека участвуют`
+      return `Ещё ${this.participants} человек участвуют`
     },
     dateText() {
       const start = new Date(this.startDate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
