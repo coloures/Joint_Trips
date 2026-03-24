@@ -28,6 +28,7 @@ import { ref, computed, $navigateTo } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
+import { useNotificationStore } from '~/stores/notificationStore'
 import CardTrip from '../components/UI/CardTrip.vue'
 import CardDebt from '../components/UI/CardDebt.vue'
 import CardNotification from '~/components/UI/CardNotification.vue'
@@ -37,9 +38,13 @@ import TripDetails from './TripDetails.vue'
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
+const notificationStore = useNotificationStore()
 
-const notificationCount = ref(3)
 const member_id = ref(2)
+
+const notificationCount = computed(() => {
+  return notificationStore.getUnreadCountByUserId(member_id.value);
+});
 
 const debtAmount = computed(() => {
   const memberTrips = tripMemberStore.getTripMembersByMemberId(member_id.value)
