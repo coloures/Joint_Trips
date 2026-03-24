@@ -17,6 +17,7 @@
           :endDate="item.endDate" 
           @tap="() => onCardTrip(item)"
         />
+        <CardAddingTrip @addNewTrip="() => onCardAddingTrip()"/>
       </StackLayout>
     </ScrollView>
   </Page>
@@ -26,17 +27,35 @@
 import { ref, computed, $navigateTo } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
+import { useExpenseStore } from '~/stores/expenseStore'
 import CardTrip from '../components/UI/CardTrip.vue'
 import CardDebt from '../components/UI/CardDebt.vue'
 import CardNotification from '~/components/UI/CardNotification.vue'
+import CardAddingTrip from '~/components/UI/CardAddingTrip.vue'
 import TripDetails from './TripDetails.vue'
 
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
+const expenseStore = useExpenseStore()
 
-const debtAmount = ref(12000)
 const notificationCount = ref(3)
 const member_id = ref(2)
+
+const debtAmount = computed(() => {
+  const memberTrips = tripMemberStore.getTripMembersByMemberId(member_id.value)
+  let totalDebt = 0;
+
+  memberTrips.forEach(memberTrip => {
+    const debts = expenseStore.calculateDebts(memberTrip.trip_id);
+    debts.forEach(debt => {
+      if (debt.fromUserId === member_id.value) {
+        totalDebt += debt.amount;
+      }
+    });
+  });
+
+  return totalDebt;
+});
 
 const items = computed(() => {
   const memberTrips = tripMemberStore.getTripMembersByMemberId(member_id.value)
@@ -56,6 +75,10 @@ const onCardTrip = (item) => {
       tripId: item.id
     }
   })
+}
+
+const onCardAddingTrip = () => {
+  console.log("Добавление новой поездки")
 }
 
 const onCardDept = () => {
