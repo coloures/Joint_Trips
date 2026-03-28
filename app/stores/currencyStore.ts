@@ -3,7 +3,7 @@ import { ref } from 'nativescript-vue'
 import type { Currency } from '~/models/currency'
 import Currencies from '../seeders/currencies.json'
 
-export const useTripStore = defineStore('trip', () => {
+export const useCurrencyStore = defineStore('currency', () => {
   const currencies = ref<Currency[]>([])
 
   function init() {
