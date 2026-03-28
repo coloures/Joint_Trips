@@ -34,6 +34,7 @@ import CardDebt from '../components/UI/CardDebt.vue'
 import CardNotification from '~/components/UI/CardNotification.vue'
 import CardAddingTrip from '~/components/UI/CardAddingTrip.vue'
 import TripDetails from './TripDetails.vue'
+import AddTrip from './AddTrip.vue'
 
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
@@ -83,7 +84,11 @@ const onCardTrip = (item) => {
 }
 
 const onCardAddingTrip = () => {
-  console.log("Добавление новой поездки")
+  $navigateTo(AddTrip, {
+    transition: 'slide',
+    curve: 'easeInOut',
+    duration: 300
+  })
 }
 
 const onCardDept = () => {

@@ -43,6 +43,18 @@ export const useExpenseStore = defineStore('expense', () => {
     return expenseAllocations.value.filter(allocation => allocation.expense_id === expenseId);
   };
 
+  const getTotalExpensesByTripId = (tripId: number): number => {
+    return getExpensesByTripId(tripId).reduce((sum, e) => sum + e.amount, 0);
+  };
+
+  const getExpensesByCategory = (tripId: number, categoryId: number): Expense[] => {
+    return getExpensesByTripId(tripId).filter(e => e.type_of_expense === categoryId);
+  };
+
+  const getTotalByCategory = (tripId: number, categoryId: number): number => {
+    return getExpensesByCategory(tripId, categoryId).reduce((sum, e) => sum + e.amount, 0);
+  };
+
   // Получить распределения поездки
   const getAllocationsByTripId = (tripId: number): ExpenseAllocation[] => {
     const tripExpenseIds = getExpensesByTripId(tripId).map(exp => exp.id);
@@ -113,6 +125,7 @@ export const useExpenseStore = defineStore('expense', () => {
       id: Math.max(0, ...expenses.value.map(e => e.id)) + 1
     };
     expenses.value.push(newExpense);
+    return newExpense.id
   }
 
   function addExpenseAllocation(allocation: Omit<ExpenseAllocation, 'id'>) {
@@ -134,6 +147,9 @@ export const useExpenseStore = defineStore('expense', () => {
     getAllExpenseAllocations,
     getAllocationsByExpenseId,
     getAllocationsByTripId,
+    getTotalExpensesByTripId,
+    getExpensesByCategory,
+    getTotalByCategory,
     
     // Метод
     calculateDebts,
