@@ -134,7 +134,27 @@ export const useExpenseStore = defineStore('expense', () => {
       id: Math.max(0, ...expenseAllocations.value.map(e => e.id)) + 1
     };
     expenseAllocations.value.push(newAllocation);
+
+  
   }
+
+  function updateExpense(id: number, updates: Partial<Omit<Expense, 'id'>>) {
+    const index = expenses.value.findIndex(e => e.id === id)
+    if (index !== -1) {
+      expenses.value[index] = { ...expenses.value[index], ...updates }
+    }
+  }
+
+  function deleteExpense(id: number) {
+    expenses.value = expenses.value.filter(e => e.id !== id)
+    // Удаляем также распределения этого расхода
+    expenseAllocations.value = expenseAllocations.value.filter(a => a.expense_id !== id)
+  }
+
+  function deleteExpenseAllocation(id: number) {
+    expenseAllocations.value = expenseAllocations.value.filter(a => a.id !== id)
+  }
+
 
   return {
     // Состояние
@@ -156,6 +176,9 @@ export const useExpenseStore = defineStore('expense', () => {
     
     // Методы для изменения
     addExpense,
-    addExpenseAllocation
+    addExpenseAllocation,
+    updateExpense,
+    deleteExpense,
+    deleteExpenseAllocation
   };
 });
