@@ -15,19 +15,7 @@
     "id": 3,
     "trip_id": 1,
     "expense_type_id": 3,
-    "planned_amount": 15000
-  },
-  {
-    "id": 4,
-    "trip_id": 1,
-    "expense_type_id": 4,
-    "planned_amount": 10000
-  },
-  {
-    "id": 5,
-    "trip_id": 1,
-    "expense_type_id": 5,
-    "planned_amount": 3000
+    "planned_amount": 5000
   },
   {
     "id": 6,

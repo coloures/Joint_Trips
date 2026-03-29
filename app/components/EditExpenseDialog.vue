@@ -1,8 +1,8 @@
 <template>
-  <Page modal="true" backgroundColor="white">
+  <Page modal="true" backgroundColor="rgba(0,0,0,0.5)">
     <StackLayout class="dialog-container">
       <StackLayout class="dialog-content">
-        <Label text="➕ Добавить расход" class="dialog-title" />
+        <Label text="✏️ Редактировать расход" class="dialog-title" />
         
         <TextField 
           v-model="expenseDescription"
@@ -17,6 +17,7 @@
           class="input"
         />
         
+        <!-- Заменяем DropDown на ListPicker -->
         <Label text="Категория" class="label" />
         <ListPicker 
           :items="categoryNames"
@@ -25,12 +26,7 @@
           class="list-picker"
         />
         
-        <Label 
-          v-if="categoryBudgetWarning" 
-          :text="categoryBudgetWarning" 
-          class="warning"
-        />
-        
+        <!-- Заменяем DropDown на ListPicker для плательщика -->
         <Label text="Кто оплатил" class="label" />
         <ListPicker 
           :items="payerNames"
@@ -39,6 +35,7 @@
           class="list-picker"
         />
         
+        <!-- Заменяем DatePickerField на обычный TextField с подсказкой -->
         <TextField 
           v-model="expenseDate"
           hint="Дата (ГГГГ-ММ-ДД)" 
@@ -73,7 +70,7 @@
         
         <GridLayout columns="*, *" class="dialog-buttons">
           <Button text="Отмена" class="btn-outline" @tap="close" />
-          <Button text="Добавить" class="btn-primary" @tap="addExpense" />
+          <Button text="Сохранить" class="btn-primary" @tap="updateExpense" />
         </GridLayout>
       </StackLayout>
     </StackLayout>
@@ -81,40 +78,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'nativescript-vue'
+import { ref, computed, onMounted } from 'nativescript-vue'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
-import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
+import type { Expense } from '~/models/expense'
 
 const props = defineProps<{
+  expense: Expense | null
   tripId: number
 }>()
 
-const emit = defineEmits(['close', 'added'])
+const emit = defineEmits(['close', 'updated'])
 
 const expenseStore = useExpenseStore()
 const tripMemberStore = useTripMemberStore()
 const expenseTypeStore = useExpenseTypeStore()
 const userStore = useUserStore()
-const budgetCategoryStore = useTripBudgetCategoryStore()
 
 const expenseDescription = ref('')
 const expenseAmount = ref('')
 const selectedCategoryId = ref<number | null>(null)
 const selectedPayerId = ref<number | null>(null)
-const expenseDate = ref(new Date().toISOString().split('T')[0])
+const expenseDate = ref('')
 const selectedParticipants = ref<Record<number, boolean>>({})
 const error = ref('')
-const categoryBudgetWarning = ref('')
 
 const participants = computed(() => tripMemberStore.getTripMembersByTripId(props.tripId))
 const categories = computed(() => expenseTypeStore.getAllExpenseTypes())
 
+// Для ListPicker нужны массивы строк
 const categoryNames = computed(() => categories.value.map(c => c.name))
 const payerNames = computed(() => participants.value.map(p => getUserName(p.member_id)))
 
+// Вычисляем индексы для ListPicker
 const selectedCategoryIndex = computed(() => {
   if (!selectedCategoryId.value) return 0
   const index = categories.value.findIndex(c => c.id === selectedCategoryId.value)
@@ -131,57 +129,6 @@ const getUserName = (userId: number) => {
   const user = userStore.getUserById(userId)
   return user?.first_name || user?.first_name || `Пользователь ${userId}`
 }
-
-const getCategoryBudget = (categoryId: number): number => {
-  const budget = budgetCategoryStore.getBudgetCategory(props.tripId, categoryId)
-  return budget?.planned_amount || 0
-}
-
-const getCategorySpent = (categoryId: number): number => {
-  return expenseStore.getTotalByCategory(props.tripId, categoryId)
-}
-
-const checkCategoryLimit = (categoryId: number, amount: number): { allowed: boolean; remaining: number; message: string } => {
-  const budget = getCategoryBudget(categoryId)
-  if (budget === 0) {
-    return { allowed: true, remaining: Infinity, message: '' }
-  }
-  
-  const spent = getCategorySpent(categoryId)
-  const remaining = budget - spent
-  
-  if (amount > remaining) {
-    return { 
-      allowed: false, 
-      remaining, 
-      message: `Превышение бюджета категории! Остаток: ${remaining.toLocaleString('ru-RU')} ₽` 
-    }
-  }
-  
-  return { allowed: true, remaining, message: '' }
-}
-
-watch([expenseAmount, selectedCategoryId], ([amount, categoryId]) => {
-  if (!amount || !categoryId) {
-    categoryBudgetWarning.value = ''
-    return
-  }
-  
-  const numAmount = parseFloat(amount)
-  if (isNaN(numAmount) || numAmount <= 0) {
-    categoryBudgetWarning.value = ''
-    return
-  }
-  
-  const check = checkCategoryLimit(categoryId, numAmount)
-  if (!check.allowed) {
-    categoryBudgetWarning.value = check.message
-  } else if (check.remaining !== Infinity && check.remaining < 10000) {
-    categoryBudgetWarning.value = `⚠️ Остаток бюджета: ${check.remaining.toLocaleString('ru-RU')} ₽`
-  } else {
-    categoryBudgetWarning.value = ''
-  }
-})
 
 const onCategoryChange = (args: any) => {
   const index = args.value
@@ -201,7 +148,22 @@ const toggleParticipant = (userId: number) => {
   selectedParticipants.value[userId] = !selectedParticipants.value[userId]
 }
 
-const addExpense = () => {
+onMounted(() => {
+  if (props.expense) {
+    expenseDescription.value = props.expense.description || ''
+    expenseAmount.value = String(props.expense.amount)
+    selectedCategoryId.value = props.expense.type_of_expense
+    selectedPayerId.value = props.expense.user_id_pay
+    expenseDate.value = props.expense.date
+    
+    const allocations = expenseStore.getAllocationsByExpenseId(props.expense.id)
+    allocations.forEach(allocation => {
+      selectedParticipants.value[allocation.user_id] = true
+    })
+  }
+})
+
+const updateExpense = () => {
   if (!expenseDescription.value || !expenseAmount.value || !selectedCategoryId.value || !selectedPayerId.value) {
     error.value = 'Заполните обязательные поля'
     return
@@ -210,12 +172,6 @@ const addExpense = () => {
   const amount = parseFloat(expenseAmount.value)
   if (isNaN(amount) || amount <= 0) {
     error.value = 'Введите корректную сумму'
-    return
-  }
-  
-  const budgetCheck = checkCategoryLimit(selectedCategoryId.value, amount)
-  if (!budgetCheck.allowed) {
-    error.value = budgetCheck.message
     return
   }
   
@@ -228,25 +184,35 @@ const addExpense = () => {
     return
   }
   
-  const newExpense = expenseStore.addExpense({
-    trip_id: props.tripId,
-    description: expenseDescription.value,
-    amount: amount,
-    type_of_expense: selectedCategoryId.value,
-    user_id_pay: selectedPayerId.value,
-    date: expenseDate.value,
-    currency_id: 1
-  })
-  
-  const amountPerPerson = amount / selectedUserIds.length
-  selectedUserIds.forEach(userId => {
-    expenseStore.addExpenseAllocation({
-      expense_id: newExpense,
-      user_id: userId,
-      amount: amountPerPerson
+  if (props.expense) {
+    // Обновляем расход
+    expenseStore.updateExpense(props.expense.id, {
+      description: expenseDescription.value,
+      amount: amount,
+      type_of_expense: selectedCategoryId.value,
+      user_id_pay: selectedPayerId.value,
+      date: expenseDate.value
     })
-  })
-  emit('close')
+    
+    // Удаляем старые распределения
+    const oldAllocations = expenseStore.getAllocationsByExpenseId(props.expense.id)
+    oldAllocations.forEach(allocation => {
+      expenseStore.deleteExpenseAllocation(allocation.id)
+    })
+    
+    // Добавляем новые распределения
+    const amountPerPerson = amount / selectedUserIds.length
+    selectedUserIds.forEach(userId => {
+      expenseStore.addExpenseAllocation({
+        expense_id: props.expense!.id,
+        user_id: userId,
+        amount: amountPerPerson
+      })
+    })
+  }
+  
+  emit('updated')
+  close()
 }
 
 const close = () => {
@@ -256,7 +222,7 @@ const close = () => {
 
 <style scoped>
 .dialog-container {
-  background-color: white;
+  background-color: rgba(0, 0, 0, 0.5);
   height: 100%;
   justify-content: center;
   align-items: center;
@@ -318,14 +284,6 @@ const close = () => {
 .participant-name {
   margin-left: 8;
   font-size: 14;
-}
-
-.warning {
-  color: #f59e0b;
-  font-size: 12;
-  margin-top: -4;
-  margin-bottom: 8;
-  text-align: center;
 }
 
 .error {

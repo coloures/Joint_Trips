@@ -8,7 +8,7 @@
       <StackLayout class="p-4">
         
         <!-- 🔹 Глобальная ошибка -->
-        <Label v-if="snapshot.context.errors?.submit" :text="snapshot.context.errors.submit" class="error global-error" />
+        <Label v-if="globalError" :text="globalError" class="error global-error" />
 
         <!-- 🔹 Эмодзи -->
         <StackLayout class="form-group">
@@ -19,8 +19,8 @@
               :key="emo" 
               :text="emo" 
               class="emoji"
-              :class="{ active: snapshot.context.emoji === emo }"
-              @tap="setField('emoji', emo)"
+              :class="{ active: formData.emoji === emo }"
+              @tap="formData.emoji = emo"
             />
           </StackLayout>
         </StackLayout>
@@ -29,54 +29,42 @@
         <StackLayout class="form-group">
           <Label text="Название *" class="label" />
           <TextField 
-            :text="snapshot.context.title"
+            v-model="formData.title"
             hint="Отпуск в Сочи" 
             class="input"
-            @textChange="(e: any) => setField('title', e.value)"
           />
-          <Label v-if="snapshot.context.errors?.title" :text="snapshot.context.errors.title" class="error" />
+          <Label v-if="errors.title" :text="errors.title" class="error" />
         </StackLayout>
 
         <!-- 🔹 Место -->
         <StackLayout class="form-group">
           <Label text="Куда едем? *" class="label" />
           <TextField 
-            :text="snapshot.context.country"
+            v-model="formData.country"
             hint="Россия, Сочи" 
             class="input"
-            @textChange="(e: any) => setField('country', e.value)"
           />
-          <Label v-if="snapshot.context.errors?.country" :text="snapshot.context.errors.country" class="error" />
+          <Label v-if="errors.country" :text="errors.country" class="error" />
         </StackLayout>
 
-        <!-- 🔹 Даты с ручным вводом -->
+        <!-- 🔹 Даты -->
         <StackLayout class="form-group">
           <Label text="Даты поездки *" class="label" />
           
-          <!-- Поле для даты заезда -->
-          <StackLayout class="date-field-wrapper">
-            <TextField 
-              :text="snapshot.context.startDate"
-              hint="ГГГГ-ММ-ДД (например: 2024-12-31)" 
-              class="input"
-              keyboard-type="number"
-              @textChange="(e: any) => onDateChange('start', e.value)"
-            />
-            <Label v-if="snapshot.context.errors?.startDate" :text="snapshot.context.errors.startDate" class="error" />
-          </StackLayout>
+          <TextField 
+            v-model="formData.startDate"
+            hint="ГГГГ-ММ-ДД (заезд)" 
+            class="input"
+          />
           
-          <!-- Поле для даты выезда -->
-          <StackLayout class="date-field-wrapper mt-2">
-            <TextField 
-              :text="snapshot.context.endDate"
-              hint="ГГГГ-ММ-ДД (например: 2025-01-10)" 
-              class="input"
-              keyboard-type="number"
-              @textChange="(e: any) => onDateChange('end', e.value)"
-            />
-            <Label v-if="snapshot.context.errors?.endDate" :text="snapshot.context.errors.endDate" class="error" />
-          </StackLayout>
+          <TextField 
+            v-model="formData.endDate"
+            hint="ГГГГ-ММ-ДД (выезд)" 
+            class="input mt-2"
+          />
           
+          <Label v-if="errors.startDate" :text="errors.startDate" class="error" />
+          <Label v-if="errors.endDate" :text="errors.endDate" class="error" />
           <Label text="Формат: ГГГГ-ММ-ДД" class="hint" />
         </StackLayout>
 
@@ -84,13 +72,12 @@
         <StackLayout class="form-group">
           <Label text="Бюджет (₽)" class="label" />
           <TextField 
-            :text="String(snapshot.context.budget)"
+            v-model="formData.budget"
             hint="100000" 
             keyboard-type="number"
             class="input"
-            @textChange="(e: any) => setField('budget', Number(e.value) || 0)"
           />
-          <Label v-if="snapshot.context.errors?.budget" :text="snapshot.context.errors.budget" class="error" />
+          <Label v-if="errors.budget" :text="errors.budget" class="error" />
         </StackLayout>
 
         <!-- 🔹 Кнопки -->
@@ -98,9 +85,9 @@
           <Button col="0" text="Сбросить" class="btn-outline" @tap="onReset" />
           <Button 
             col="1" 
-            :text="snapshot.context.isSubmitting ? 'Создаём...' : '✅ Создать поездку'" 
+            :text="isSubmitting ? 'Создаём...' : '✅ Создать поездку'" 
             class="btn-primary"
-            :enabled="!snapshot.context.isSubmitting"
+            :enabled="!isSubmitting"
             @tap="onSubmit" 
           />
         </GridLayout>
@@ -111,200 +98,187 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, $navigateBack } from 'nativescript-vue'
-import { createActor } from 'xstate'
-import { addTripMachine, validateForm, type AddTripContext } from '~/machines/addTrip.machine'
+import { ref, computed, $navigateBack } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import * as dialogs from '@nativescript/core/ui/dialogs'
 
-// Сторы
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 
-// 🔹 Реальное сохранение в Pinia
-const saveTripToStores = async (ctx: AddTripContext) => {
-  console.log('Сохраняем поездку:', ctx)
-  
-  // 1. Создаём поездку
-  const newTrip = {
-    emoji: ctx.emoji,
-    creator_id: ctx.creatorId,
-    title: ctx.title,
-    country: ctx.country,
-    startDate: ctx.startDate,
-    endDate: ctx.endDate,
-    currency_id: ctx.currencyId,
-    budget: ctx.budget,
-    description: ctx.description || ''
-  }
-  
-  tripStore.addTrip(newTrip)
-  
-  const tripId = tripStore.trips[tripStore.trips.length - 1]?.id
-  if (!tripId) throw new Error('Failed to create trip')
-  
-  // 2. Добавляем создателя как участника
-  tripMemberStore.addTripMember({
-    trip_id: tripId,
-    member_id: ctx.creatorId,
-    status: 'confirmed',
-    role: 'creator'
-  })
-  
-  return { id: tripId }
-}
-
-// 🔹 СОЗДАЁМ АКТОР С РЕАЛЬНЫМИ СЕРВИСАМИ
-const actor = createActor(addTripMachine, {
-  // @ts-ignore
-  implementations: {
-    services: {
-      saveTrip: saveTripToStores
-    }
-  }
+// Форма
+const formData = ref({
+  title: '',
+  emoji: '🌴',
+  country: '',
+  startDate: '',
+  endDate: '',
+  budget: 0
 })
 
-// 🔹 ЗАПУСКАЕМ АКТОР
-actor.start()
-
-// 🔹 Состояние и отправка событий
-const snapshot = ref(actor.getSnapshot())
-
-// Подписываемся на обновления
-const subscription = actor.subscribe((newSnapshot) => {
-  snapshot.value = newSnapshot
+const errors = ref({
+  title: '',
+  country: '',
+  startDate: '',
+  endDate: '',
+  budget: ''
 })
 
-// Функция для отправки событий
-const send = (event: any) => {
-  actor.send(event)
-}
-
-// 🔹 Локальные данные
+const isSubmitting = ref(false)
+const globalError = ref('')
 const emojiOptions = ['🌴', '✈️', '🏔️', '🏖️', '🗼', '🏰', '🚗', '⛺']
 
-// 🔹 Валидация даты
-const isValidDate = (dateStr: string): boolean => {
-  if (!dateStr) return false
+// Валидация
+const validateForm = () => {
+  let isValid = true
+  const newErrors = {
+    title: '',
+    country: '',
+    startDate: '',
+    endDate: '',
+    budget: ''
+  }
   
-  // Проверка формата ГГГГ-ММ-ДД
-  const regex = /^\d{4}-\d{2}-\d{2}$/
-  if (!regex.test(dateStr)) return false
+  if (!formData.value.title || formData.value.title.length < 3) {
+    newErrors.title = 'Минимум 3 символа'
+    isValid = false
+  }
   
-  const date = new Date(dateStr)
-  const isValid = !isNaN(date.getTime())
+  if (!formData.value.country || formData.value.country.length < 2) {
+    newErrors.country = 'Укажите место'
+    isValid = false
+  }
   
+  if (!formData.value.startDate) {
+    newErrors.startDate = 'Выберите дату заезда'
+    isValid = false
+  }
+  
+  if (!formData.value.endDate) {
+    newErrors.endDate = 'Выберите дату выезда'
+    isValid = false
+  }
+  
+  if (formData.value.startDate && formData.value.endDate) {
+    const start = new Date(formData.value.startDate)
+    const end = new Date(formData.value.endDate)
+    if (end < start) {
+      newErrors.endDate = 'Не может быть раньше заезда'
+      isValid = false
+    }
+  }
+  
+  if (formData.value.budget < 0) {
+    newErrors.budget = 'Не может быть отрицательным'
+    isValid = false
+  }
+  
+  errors.value = newErrors
   return isValid
 }
 
-// 🔹 Обработка изменения даты
-const onDateChange = (type: 'start' | 'end', value: string) => {
-  setField(type === 'start' ? 'startDate' : 'endDate', value)
+// Сохранение
+const onSubmit = async () => {
+  console.log('=== СОЗДАНИЕ ПОЕЗДКИ ===')
   
-  // Дополнительная валидация
-  const startDate = type === 'start' ? value : snapshot.value.context.startDate
-  const endDate = type === 'end' ? value : snapshot.value.context.endDate
-  
-  if (startDate && endDate && isValidDate(startDate) && isValidDate(endDate)) {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    
-    if (end < start) {
-      dialogs.alert({
-        title: 'Ошибка',
-        message: 'Дата выезда не может быть раньше даты заезда',
-        okButtonText: 'OK'
-      })
-      if (type === 'end') {
-        setField('endDate', '')
-      }
-    }
+  if (!validateForm()) {
+    console.log('Ошибки валидации:', errors.value)
+    return
   }
-}
-
-// 🔹 Действия
-const setField = (field: string, value: any) => {
-  send({ type: 'SET_FIELD', field, value })
+  
+  isSubmitting.value = true
+  globalError.value = ''
+  
+  try {
+    console.log('Сохраняем поездку:', formData.value)
+    
+    // 1. Создаём поездку
+    const newTrip = {
+      emoji: formData.value.emoji,
+      creator_id: 2, // TODO: взять из auth
+      title: formData.value.title,
+      country: formData.value.country,
+      startDate: formData.value.startDate,
+      endDate: formData.value.endDate,
+      currency_id: 1,
+      budget: formData.value.budget,
+      description: ''
+    }
+    
+    tripStore.addTrip(newTrip)
+    
+    const trips = tripStore.getAllTrips()
+    const tripId = trips[trips.length - 1]?.id
+    
+    if (!tripId) {
+      throw new Error('Не удалось создать поездку')
+    }
+    
+    // 2. Добавляем создателя как участника
+    tripMemberStore.addTripMember({
+      trip_id: tripId,
+      member_id: 2,
+      status: 'confirmed',
+      role: 'creator'
+    })
+    
+    console.log('Поездка создана! ID:', tripId)
+    
+    await dialogs.alert({
+      title: 'Успешно',
+      message: 'Поездка создана!',
+      okButtonText: 'OK'
+    })
+    
+    $navigateBack()
+    
+  } catch (error: any) {
+    console.error('Ошибка:', error)
+    globalError.value = error.message || 'Ошибка при создании поездки'
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 const onReset = async () => {
   const result = await dialogs.confirm({
-    title: 'Сброс формы',
-    message: 'Вы уверены, что хотите сбросить все данные?',
-    okButtonText: 'Сбросить',
-    cancelButtonText: 'Отмена'
+    title: 'Сброс',
+    message: 'Очистить все поля?',
+    okButtonText: 'Да',
+    cancelButtonText: 'Нет'
   })
   
   if (result) {
-    send({ type: 'RESET' })
+    formData.value = {
+      title: '',
+      emoji: '🌴',
+      country: '',
+      startDate: '',
+      endDate: '',
+      budget: 0
+    }
+    errors.value = {
+      title: '',
+      country: '',
+      startDate: '',
+      endDate: '',
+      budget: ''
+    }
   }
 }
 
 const onCancel = async () => {
-  try {
-    const result = await dialogs.confirm({
-      title: 'Подтверждение',
-      message: 'Отменить создание поездки?',
-      okButtonText: 'Да',
-      cancelButtonText: 'Нет',
-      cancelable: true
-    })
-    
-    if (result) {
-      send({ type: 'CANCEL' })
-      $navigateBack()
-    }
-  } catch (error) {
-    console.log('Диалог закрыт без выбора')
+  const result = await dialogs.confirm({
+    title: 'Отмена',
+    message: 'Отменить создание поездки?',
+    okButtonText: 'Да',
+    cancelButtonText: 'Нет'
+  })
+  
+  if (result) {
+    $navigateBack()
   }
 }
-
-const onSubmit = () => {
-  const ctx = snapshot.value.context as AddTripContext
-  
-  // Дополнительная проверка дат перед отправкой
-  if (ctx.startDate && !isValidDate(ctx.startDate)) {
-    dialogs.alert({
-      title: 'Ошибка',
-      message: 'Неверный формат даты заезда. Используйте ГГГГ-ММ-ДД',
-      okButtonText: 'OK'
-    })
-    return
-  }
-  
-  if (ctx.endDate && !isValidDate(ctx.endDate)) {
-    dialogs.alert({
-      title: 'Ошибка',
-      message: 'Неверный формат даты выезда. Используйте ГГГГ-ММ-ДД',
-      okButtonText: 'OK'
-    })
-    return
-  }
-  
-  const errors = validateForm(ctx)
-  
-  if (Object.keys(errors).length > 0) {
-    send({ type: 'SET_FIELD', field: 'errors', value: errors })
-    return
-  }
-  
-  send({ type: 'SUBMIT' })
-}
-
-// 🔹 Инициализация
-onMounted(() => {
-  // Устанавливаем ID создателя (замени на реальный ID пользователя)
-  send({ type: 'SET_CREATOR', creatorId: 2 })
-})
-
-onUnmounted(() => {
-  // Отписываемся и останавливаем актор
-  if (subscription) {
-    subscription.unsubscribe()
-  }
-  actor.stop()
-})
 </script>
 
 <style scoped>
@@ -360,10 +334,6 @@ onUnmounted(() => {
   background-color: #3b82f6;
 }
 
-.date-field-wrapper {
-  margin-bottom: 8;
-}
-
 .hint {
   font-size: 12;
   color: #6b7280;
@@ -394,10 +364,6 @@ onUnmounted(() => {
   padding: 14 24;
   border-radius: 10;
   margin-right: 8;
-}
-
-.btn-outline:active {
-  background-color: #f3f4f6;
 }
 
 .mt-4 { 

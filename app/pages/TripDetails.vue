@@ -41,9 +41,12 @@
         <!-- Разделитель -->
         <StackLayout class="separator" />
 
-        <!-- 🔹 Бюджетный виджет -->
+        <!-- 🔹 Бюджетный виджет (сенсорный) -->
         <StackLayout class="budget-widget">
-          <Label text="💰 Бюджет поездки" class="section-title" />
+          <GridLayout columns="*, auto" class="budget-header">
+            <Label text="💰 Бюджет поездки" class="section-title" />
+            <Button text="✎ Редактировать" class="edit-budget-btn" @tap="showEditBudgetDialog" />
+          </GridLayout>
           
           <GridLayout columns="*, *" class="budget-stats">
             <StackLayout class="stat-card">
@@ -69,6 +72,40 @@
           </GridLayout>
           
           <Progress :value="usagePercentage" :maxValue="100" class="budget-progress" />
+          
+          <!-- Бюджет по категориям -->
+          <StackLayout class="categories-budget">
+            <Label text="📊 Бюджет по категориям" class="categories-title" />
+            
+            <StackLayout 
+              v-for="category in categoriesWithBudget" 
+              :key="category.id"
+              class="category-budget-item"
+              @tap="editCategoryBudget(category)"
+            >
+              <GridLayout columns="auto, *, auto">
+                <Label :text="getCategoryEmoji(category.name)" col="0" class="category-emoji" />
+                <Label :text="category.name" col="1" class="category-name" />
+                <Label 
+                  :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ₽` : 'Не указан'" 
+                  col="2" 
+                  class="category-amount"
+                  :class="{ 'no-budget': !categoryBudgetMap[category.id] }"
+                />
+              </GridLayout>
+              <Progress 
+                v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
+                :value="getCategoryPercentage(category.id)" 
+                :maxValue="100" 
+                class="category-progress"
+              />
+              <Label 
+                v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
+                :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ₽`" 
+                class="category-spent"
+              />
+            </StackLayout>
+          </StackLayout>
         </StackLayout>
 
         <!-- Разделитель -->
@@ -76,8 +113,9 @@
 
         <!-- 🔹 Расходы -->
         <StackLayout class="expenses-section">
-          <StackLayout>
+          <StackLayout class="section-header">
             <Label text="📝 Последние расходы" class="section-title" />
+            <Button text="+ Добавить" class="add-expense-btn" @tap="showAddExpense" />
           </StackLayout>
           
           <StackLayout v-if="recentExpenses.length > 0" class="expenses-list">
@@ -93,7 +131,7 @@
           <StackLayout v-else class="empty-expenses">
             <Label text="💰" class="empty-icon" />
             <Label text="Нет расходов" class="empty-text" />
-            <Button text="+ Добавить расход" class="btn-add" @tap="showAddExpense" />
+            <Button text="+ Добавить первый расход" class="btn-add" @tap="showAddExpense" />
           </StackLayout>
         </StackLayout>
 
@@ -111,26 +149,32 @@
       </StackLayout>
     </ScrollView>
 
-    <!-- Диалог добавления расхода -->
-    <AddExpenseDialog 
-      v-if="showAddDialog"
+    <!-- Диалог редактирования бюджета категории -->
+    <EditCategoryBudgetDialog 
+      v-if="showBudgetDialog"
       :tripId="tripId"
-      @close="showAddDialog = false"
-      @added="onExpenseAdded"
+      :category="selectedCategory"
+      :currentBudget="selectedCategoryBudget"
+      @close="showBudgetDialog = false"
+      @saved="onBudgetSaved"
     />
   </Page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, $navigateBack } from 'nativescript-vue'
+import { ref, computed, onMounted, $navigateBack, $navigateTo, $closeModal, $showModal } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
+import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
+import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
 import type { Trip } from '~/models/trip'
+import type { ExpenseType } from '~/models/type_of_expense'
 import ExpenseCard from '~/components/UI/ExpenseCard.vue'
 import AddExpenseDialog from '~/components/AddExpenseDialog.vue'
-import { StackLayout } from '@nativescript/core'
+import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
+import ExpenseDetails from './ExpenseDetails.vue'
 
 const props = defineProps<{
   tripId: number
@@ -139,10 +183,14 @@ const props = defineProps<{
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
+const expenseTypeStore = useExpenseTypeStore()
+const budgetCategoryStore = useTripBudgetCategoryStore()
 const userStore = useUserStore()
 
 const trip = ref<Trip | null>(null)
-const showAddDialog = ref(false)
+const showBudgetDialog = ref(false)
+const selectedCategory = ref<ExpenseType | null>(null)
+const selectedCategoryBudget = ref(0)
 const currentUserId = ref(2) // TODO: взять из authStore
 
 onMounted(() => {
@@ -181,6 +229,73 @@ const usagePercentage = computed(() => {
   return totalBudget.value === 0 ? 0 : (totalExpenses.value / totalBudget.value) * 100
 })
 
+// Категории
+const allCategories = computed(() => expenseTypeStore.getAllExpenseTypes())
+
+// Бюджеты по категориям
+const categoryBudgetMap = computed(() => {
+  const map: Record<number, number> = {}
+  allCategories.value.forEach(cat => {
+    const budget = budgetCategoryStore.getBudgetCategory(props.tripId, cat.id)
+    if (budget) {
+      map[cat.id] = budget.planned_amount
+    }
+  })
+  return map
+})
+
+// Расходы по категориям
+const categorySpentMap = computed(() => {
+  const map: Record<number, number> = {}
+  allCategories.value.forEach(cat => {
+    const spent = expenseStore.getTotalByCategory(props.tripId, cat.id)
+    if (spent > 0) {
+      map[cat.id] = spent
+    }
+  })
+  return map
+})
+
+// Категории с указанным бюджетом
+const categoriesWithBudget = computed(() => {
+  return allCategories.value.filter(cat => categoryBudgetMap.value[cat.id])
+})
+
+const getCategoryEmoji = (categoryName: string): string => {
+  const emojis: Record<string, string> = {
+    'Билеты': '✈️',
+    'Отели': '🏨',
+    'Питание': '🍜',
+    'Развлечения': '🎉',
+    'Страховка': '🛡️',
+    'Другое': '📝'
+  }
+  return emojis[categoryName] || '💰'
+}
+
+const getCategoryPercentage = (categoryId: number) => {
+  const budget = categoryBudgetMap.value[categoryId] || 0
+  const spent = categorySpentMap.value[categoryId] || 0
+  if (budget === 0) return 0
+  return (spent / budget) * 100
+}
+
+const editCategoryBudget = (category: ExpenseType) => {
+  selectedCategory.value = category
+  selectedCategoryBudget.value = categoryBudgetMap.value[category.id] || 0
+  showBudgetDialog.value = true
+}
+
+const showEditBudgetDialog = () => {
+  // TODO: показать диалог для редактирования общего бюджета
+  console.log('Редактировать общий бюджет')
+}
+
+const onBudgetSaved = () => {
+  showBudgetDialog.value = false
+  // Данные обновятся автоматически через computed
+}
+
 // Расходы (последние 5)
 const recentExpenses = computed(() => {
   const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
@@ -202,17 +317,30 @@ const onDelete = () => {
 }
 
 const showAddExpense = () => {
-  showAddDialog.value = true
+  console.log('OPEN MODAL')
+  $showModal(AddExpenseDialog, {
+    props: {
+      tripId: props.tripId
+    },
+    context: {},
+    fullscreen: true,
+    closeCallback: () => {
+      // Обновляем данные после закрытия
+      onExpenseAdded()
+    }
+  })
 }
 
 const openExpenseDetails = (expenseId: number) => {
-  // TODO: открыть детали расхода
-  console.log('Открыть расход:', expenseId)
+  $navigateTo(ExpenseDetails, {
+    props: {
+      expenseId: expenseId,
+      tripId: props.tripId
+    }
+  })
 }
 
 const onExpenseAdded = () => {
-  showAddDialog.value = false
-  // Данные обновятся автоматически через computed
 }
 </script>
 
@@ -264,7 +392,7 @@ const onExpenseAdded = () => {
 .separator {
   height: 1;
   background-color: #e5e7eb;
-  margin: 20 0;
+  margin: 16 0;
 }
 
 /* Бюджетный виджет */
@@ -272,16 +400,32 @@ const onExpenseAdded = () => {
   background-color: white;
   border-radius: 16;
   padding: 16;
-  margin-bottom: 8;
+  margin-bottom: 16;
   border-width: 1;
   border-color: #e5e7eb;
 }
 
+.budget-header {
+  margin-bottom: 16;
+  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.edit-budget-btn {
+  background-color: transparent;
+  color: #3b82f6;
+  font-size: 12;
+  padding: 6 12;
+  border-width: 0;
+  border-radius: 16;
+  height: 32;
+}
+
 .section-title {
-  font-size: 18;
+  font-size: 16;
   font-weight: 600;
   color: #1f2937;
-  margin-bottom: 16;
 }
 
 .budget-stats {
@@ -302,7 +446,7 @@ const onExpenseAdded = () => {
 }
 
 .stat-value {
-  font-size: 20;
+  font-size: 18;
   font-weight: bold;
   color: #1f2937;
 }
@@ -322,30 +466,91 @@ const onExpenseAdded = () => {
   background-color: #e5e7eb;
 }
 
-/* Расходы */
-.expenses-section {
+/* Бюджет по категориям */
+.categories-budget {
+  margin-top: 20;
+  padding-top: 16;
+  border-top-width: 1;
+  border-top-color: #e5e7eb;
+}
+
+.categories-title {
+  font-size: 14;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12;
+}
+
+.category-budget-item {
+  padding: 12;
+  background-color: #f9fafb;
+  border-radius: 12;
   margin-bottom: 8;
 }
 
-.section-header {
+.category-emoji {
+  font-size: 18;
+  margin-right: 12;
+  width: 32;
+}
+
+.category-name {
+  font-size: 14;
+  font-weight: 500;
+  color: #374151;
+}
+
+.category-amount {
+  font-size: 14;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.category-amount.no-budget {
+  color: #9ca3af;
+  font-weight: normal;
+}
+
+.category-progress {
+  margin-top: 8;
+  height: 4;
+  border-radius: 2;
+  background-color: #e5e7eb;
+}
+
+.category-spent {
+  font-size: 10;
+  color: #6b7280;
+  margin-top: 4;
+}
+
+/* Расходы */
+.expenses-section {
   margin-bottom: 16;
+}
+
+.section-header {
+  flex-direction: row;
+  justify-content: space-between;
   align-items: center;
-  padding: 0 0 8 0;
+  margin-bottom: 16;
+  padding-bottom: 8;
   border-bottom-width: 1;
   border-bottom-color: #e5e7eb;
 }
 
-.link-btn {
-  background-color: transparent;
-  color: #3b82f6;
-  font-size: 14;
-  padding: 4 8;
+.add-expense-btn {
+  background-color: #3b82f6;
+  color: white;
+  font-size: 12;
+  padding: 6 12;
+  border-radius: 20;
   border-width: 0;
+  height: 32;
 }
 
 .expenses-list {
   margin-top: 8;
-  margin-bottom: 8;
 }
 
 /* Карточки расходов */
@@ -383,19 +588,18 @@ const onExpenseAdded = () => {
 
 /* Кнопки действий */
 .actions {
-  margin-top: 8;
-  margin-bottom: 8;
-  gap: 16;
+  margin-top: 16;
+  margin-bottom: 16;
+  gap: 12;
 }
 
 .btn-primary {
   background-color: #3b82f6;
   color: white;
-  padding: 14 24;
+  padding: 12 20;
   border-radius: 10;
   font-size: 14;
   font-weight: 500;
-  margin-right: 8;
 }
 
 .btn-outline {
@@ -403,10 +607,9 @@ const onExpenseAdded = () => {
   border-width: 1;
   border-color: #ef4444;
   color: #ef4444;
-  padding: 14 24;
+  padding: 12 20;
   border-radius: 10;
   font-size: 14;
   font-weight: 500;
-  margin-left: 8;
 }
 </style>
