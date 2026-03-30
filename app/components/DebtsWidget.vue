@@ -1,69 +1,57 @@
 <template>
   <StackLayout class="debts-widget">
-    <!-- Заголовок -->
-    <GridLayout columns="*, auto" class="debts-header">
-      <Label text="👥 Кто кому должен" class="section-title" />
+    <!-- Красная плашка "Я должен" -->
+    <StackLayout class="debt-header" v-if="totalMyDebt > 0">
       <Label 
-        v-if="totalMyDebt > 0"
         :text="`Я должен: ${totalMyDebt.toLocaleString('ru-RU')} ₽`"
-        class="my-debt-badge"
+        class="header-text"
       />
-    </GridLayout>
+    </StackLayout>
 
     <!-- Список долгов -->
-    <StackLayout v-if="debts.length > 0" class="debts-list">
-      <GridLayout 
+    <StackLayout class="debts-list">
+      <StackLayout 
         v-for="(debt, index) in debts" 
         :key="index"
-        columns="auto, *, auto"
         class="debt-row"
       >
-        <!-- Кто должен -->
-        <Label 
-          :text="getUserEmoji(debt.fromUserId)" 
-          col="0" 
-          class="user-emoji"
-        />
-        <Label 
-          :text="getUserName(debt.fromUserId)" 
-          col="1" 
-          class="debtor-name"
-        />
+        <GridLayout columns="*, auto, *" class="debt-inner">
+          <!-- Левая часть: должник -->
+          <StackLayout col="0" orientation="horizontal" class="left-part">
+            <Label 
+              :text="getUserName(debt.fromUserId)" 
+              class="debtor-name"
+            />
+          </StackLayout>
 
-        <!-- Стрелка -->
-        <Label text="→" col="1" class="arrow" />
+          <!-- Сумма ПО ЦЕНТРУ -->
+          <Label 
+            col="1"
+            :text="`${debt.amount.toLocaleString('ru-RU')} ₽`"
+            class="debt-amount"
+          />
 
-        <!-- Кому должен -->
-        <Label 
-          :text="getUserEmoji(debt.toUserId)" 
-          col="2" 
-          class="user-emoji"
-        />
-        <Label 
-          :text="getUserName(debt.toUserId)" 
-          col="3" 
-          class="creditor-name"
-        />
-
-        <!-- Сумма -->
-        <Label 
-          :text="`${debt.amount.toLocaleString('ru-RU')} ₽`"
-          col="4" 
-          class="debt-amount"
-        />
-      </GridLayout>
+          <!-- Правая часть: кому должен -->
+          <StackLayout col="2" orientation="horizontal" class="right-part">
+            <Label 
+              :text="getUserName(debt.toUserId)" 
+              class="creditor-name"
+            />
+          </StackLayout>
+        </GridLayout>
+      </StackLayout>
     </StackLayout>
 
     <!-- Пустое состояние -->
-    <StackLayout v-else class="empty-state">
+    <StackLayout v-if="debts.length === 0" class="empty-state">
       <Label text="🎉" class="empty-icon" />
       <Label text="Все долги закрыты!" class="empty-text" />
     </StackLayout>
 
-    <!-- Кнопка «Разобраться с долгами» (опционально) -->
+    <!-- Большая синяя кнопка -->
     <Button 
       text="💸 Разобраться с долгами" 
-      class="btn-primary-small"
+      class="btn-settle"
       @tap="onSettleDebts"
     />
   </StackLayout>
@@ -81,33 +69,23 @@ const props = defineProps<{
 const expenseStore = useExpenseStore()
 const userStore = useUserStore()
 
-// Получаем все долги по поездке
 const debts = computed(() => expenseStore.calculateDebts(props.tripId))
 
-// Сколько я должен всего (для текущего пользователя)
-const currentUserId = 2 // TODO: потом заменишь на authStore.getCurrentUserId()
+const currentUserId = 2 // TODO: позже заменишь на authStore.getCurrentUserId()
+
 const totalMyDebt = computed(() => {
   return debts.value
     .filter(d => d.fromUserId === currentUserId)
     .reduce((sum, d) => sum + d.amount, 0)
 })
 
-// Вспомогательные функции
 const getUserName = (userId: number) => {
   const user = userStore.getUserById(userId)
   return user?.first_name || `Пользователь ${userId}`
 }
 
-const getUserEmoji = (userId: number) => {
-  const emojis = ['👨', '👩', '🧔', '👧', '👦', '🧑‍🚀']
-  return emojis[userId % emojis.length]
-}
-
-// Простое действие (можно потом расширить)
 const onSettleDebts = () => {
-  console.log('🔧 Разбираемся с долгами... (здесь можно открыть модалку или перейти на экран расчетов)')
-  // Пример: alert или навигация
-  // $navigateTo(DebtsSettlementPage, { props: { tripId: props.tripId } })
+  console.log('💸 Разбираемся с долгами...')
 }
 </script>
 
@@ -121,24 +99,18 @@ const onSettleDebts = () => {
   border-color: #e5e7eb;
 }
 
-.debts-header {
-  align-items: center;
-  margin-bottom: 12;
+.debt-header {
+  background-color: #ef4444;
+  border-radius: 9999;
+  padding: 10 20;
+  margin-bottom: 16;
 }
 
-.section-title {
+.header-text {
+  color: white;
   font-size: 16;
   font-weight: 600;
-  color: #1f2937;
-}
-
-.my-debt-badge {
-  background-color: #ef4444;
-  color: white;
-  font-size: 12;
-  padding: 4 10;
-  border-radius: 9999;
-  font-weight: 500;
+  text-align: center;
 }
 
 .debts-list {
@@ -151,35 +123,47 @@ const onSettleDebts = () => {
   border-bottom-color: #f3f4f6;
 }
 
-.user-emoji {
-  font-size: 22;
-  width: 32;
+.debt-inner {
+  align-items: center;
+}
+
+.left-part,
+.right-part {
+  flex-direction: row;
+  align-items: center;
+  max-width: 40%;
+}
+
+.avatar {
+  font-size: 26;
   margin-right: 8;
+  width: 32;
+  flex-shrink: 0;
 }
 
 .debtor-name,
 .creditor-name {
   font-size: 15;
   color: #374151;
-}
-
-.arrow {
-  font-size: 18;
-  color: #9ca3af;
-  margin-horizontal: 8;
-  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 120;
 }
 
 .debt-amount {
   font-size: 16;
-  font-weight: 600;
+  font-weight: 700;
   color: #ef4444;
-  text-align: right;
+  text-align: center;
+  padding: 0 8;
+  min-width: 60;
+  white-space: nowrap;
 }
 
 .empty-state {
   align-items: center;
-  padding: 24 0;
+  padding: 30 0;
 }
 
 .empty-icon {
@@ -188,18 +172,17 @@ const onSettleDebts = () => {
 }
 
 .empty-text {
-  font-size: 14;
+  font-size: 15;
   color: #6b7280;
-  text-align: center;
 }
 
-.btn-primary-small {
+.btn-settle {
   background-color: #3b82f6;
   color: white;
-  padding: 10 16;
+  font-size: 16;
+  font-weight: 600;
+  padding: 14 20;
   border-radius: 9999;
-  font-size: 14;
-  font-weight: 500;
-  align-self: center;
+  height: 52;
 }
 </style>
