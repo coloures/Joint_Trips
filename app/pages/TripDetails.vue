@@ -108,6 +108,9 @@
           </StackLayout>
         </StackLayout>
 
+        <!-- 🔹 Виджет долгов -->
+        <DebtsWidget :tripId="props.tripId" />
+
         <!-- Разделитель -->
         <StackLayout class="separator" />
 
@@ -175,6 +178,7 @@ import ExpenseCard from '~/components/UI/ExpenseCard.vue'
 import AddExpenseDialog from '~/components/AddExpenseDialog.vue'
 import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
 import ExpenseDetails from './ExpenseDetails.vue'
+import DebtsWidget from '~/components/DebtsWidget.vue'
 
 const props = defineProps<{
   tripId: number
