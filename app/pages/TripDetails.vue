@@ -36,40 +36,18 @@
           <StackLayout>
             <Label class="trip-title" text="Поездка в" horizontalAlignment="center"/>
             <Label class="trip-title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
-            <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center"/>
+            <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
           </StackLayout>
 
-        <!-- 🔹 Виджет долгов -->
-        <DebtsWidget :tripId="props.tripId" />
+          <GridLayout class="particapantsmain"columns="auto, auto, auto" rows="auto">
 
-        <!-- Разделитель -->
-        <StackLayout class="separator" />
-          <StackLayout class="info-block">
-            <Label :text="`${trip?.emoji} ${trip?.title}`" class="title" />
-            <Label :text="trip?.country" class="subtitle" />
+            <StackLayout orientation="vertical" col="0" marginTop="4">
+               <Label class="trip-title" text="Участники"/>
+               <Label class="trip-title3" :text="`${participantsCount} человек`" marginTop="8" />
+            </StackLayout>
+          </GridLayout>
 
-            <GridLayout columns="auto, *" class="info-row">
-              <Label text="📅" col="0" class="icon" />
-              <Label :text="formattedDates" col="1" />
-            </GridLayout>
 
-            <GridLayout columns="auto, *" class="info-row">
-              <Label text="💰" col="0" class="icon" />
-              <Label :text="formattedBudget" col="1" />
-            </GridLayout>
-
-            <GridLayout columns="auto, *" class="info-row">
-              <Label text="👥" col="0" class="icon" />
-              <Label :text="`${participantsCount} участников`" col="1" />
-            </GridLayout>
-
-            <Label
-              v-if="trip?.description"
-              :text="trip.description"
-              class="description"
-              textWrap="true"
-            />
-          </StackLayout>
 
           <StackLayout class="separator" />
 
@@ -152,7 +130,7 @@
                 v-for="expense in recentExpenses"
                 :key="expense.id"
                 :expense="expense"
-                :currentUserId="currentUserId"
+                :currentUserId="currentUserId ?? undefined"
                 @tap="openExpenseDetails"
               />
             </StackLayout>
@@ -206,7 +184,7 @@ import AddExpenseDialog from './AddExpenseDialog.vue'
 import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
 import ExpenseDetails from './ExpenseDetails.vue'
 import DebtsWidget from '~/components/DebtsWidget.vue'
-import { StackLayout } from '@nativescript/core'
+import { GridLayout, Label, StackLayout } from '@nativescript/core'
 
 const props = defineProps<{
   tripId: number
@@ -389,9 +367,32 @@ const openExpenseDetails = (expenseId: number) => {
 .trip-title3 {
   font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
   font-size: 20;
-  margin-top: 16;
   font-weight: light;
   color: #6F7071;
+}
+
+.particapantsmain {
+  margin-top: 32;
+  padding-bottom: 20;
+  padding-top: 20;
+  padding-left: 24;
+  background-color: white;
+  border-radius: 24;
+  elevation: 8;
+  width: 354;
+  height: 130;
+  shadow-radius: 8; /* iOS */
+  shadow-color: #000000;
+  shadow-opacity: 0.9;
+  shadow-offset-width: 0;
+  shadow-offset-height: 4;
+}
+
+.bigtext{
+  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
+  font-size: 20;
+  font-weight: bold;
+  color: 313132;
 }
 
 .hidden {
