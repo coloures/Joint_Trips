@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
-import { ref } from 'nativescript-vue';
+import { computed, ref } from 'nativescript-vue';
 import type { User } from '~/models/user';
 
 import Users from '../seeders/users.json';
 
 export const useUserStore = defineStore('user', () => {
-  // Состояние
   const users = ref<User[]>([]);
+  const currentUserId = ref<number | null>(null);
 
   // Инициализация из сидов (в будущем будет из API)
   function init() {
@@ -30,6 +30,48 @@ export const useUserStore = defineStore('user', () => {
     return users.value.filter(user => ids.includes(user.id));
   };
 
+  const isAuthenticated = computed(() => currentUserId.value !== null);
+
+  const currentUser = computed(() => {
+    if (!currentUserId.value) return null;
+    return getUserById(currentUserId.value);
+  });
+
+  const setCurrentUser = (userId: number | null) => {
+    currentUserId.value = userId;
+  };
+
+  const loginWithCredentials = (payload: {
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+  }) => {
+    const normalized = {
+      first_name: payload.first_name.trim().toLowerCase(),
+      last_name: payload.last_name.trim().toLowerCase(),
+      phone_number: payload.phone_number.replace(/\s+/g, '')
+    };
+
+    const matchedUser = users.value.find(user => {
+      return (
+        user.first_name.trim().toLowerCase() === normalized.first_name &&
+        user.last_name.trim().toLowerCase() === normalized.last_name &&
+        user.phone_number.replace(/\s+/g, '') === normalized.phone_number
+      );
+    });
+
+    if (matchedUser) {
+      currentUserId.value = matchedUser.id;
+      return matchedUser;
+    }
+
+    throw new Error('Пользователь не найден');
+  };
+
+  const logout = () => {
+    currentUserId.value = null;
+  };
+
   // Методы для управления данными (в будущем)
   function addUser(user: Omit<User, 'id'>) {
     const newUser: User = {
@@ -49,11 +91,17 @@ export const useUserStore = defineStore('user', () => {
   // Возвращаем публичный API
   return {
     users,
+    currentUserId,
+    currentUser,
+    isAuthenticated,
     getAllUsers,
     getUserById,
     getUserByPhoneNumber,
     getUsersByIds,
     addUser,
-    updateUser
+    updateUser,
+    loginWithCredentials,
+    logout,
+    setCurrentUser
   };
 });

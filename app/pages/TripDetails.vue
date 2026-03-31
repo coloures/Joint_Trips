@@ -195,7 +195,7 @@ const trip = ref<Trip | null>(null)
 const showBudgetDialog = ref(false)
 const selectedCategory = ref<ExpenseType | null>(null)
 const selectedCategoryBudget = ref(0)
-const currentUserId = ref(2) // TODO: взять из authStore
+const currentUserId = computed(() => userStore.currentUserId)
 
 onMounted(() => {
   trip.value = tripStore.getTripById(props.tripId)

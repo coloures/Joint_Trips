@@ -24,11 +24,12 @@
 </template>
 
 <script setup>
-import { ref, computed, $navigateTo } from 'nativescript-vue'
+import { computed, $navigateTo } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useNotificationStore } from '~/stores/notificationStore'
+import { useUserStore } from '~/stores/userStore'
 import CardTrip from '../components/UI/CardTrip.vue'
 import CardDebt from '../components/UI/CardDebt.vue'
 import CardNotification from '~/components/UI/CardNotification.vue'
@@ -40,31 +41,36 @@ const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
 const notificationStore = useNotificationStore()
+const userStore = useUserStore()
 
-const member_id = ref(2)
+const memberId = computed(() => userStore.currentUserId)
 
 const notificationCount = computed(() => {
-  return notificationStore.getUnreadCountByUserId(member_id.value);
-});
+  if (!memberId.value) return 0
+  return notificationStore.getUnreadCountByUserId(memberId.value)
+})
 
 const debtAmount = computed(() => {
-  const memberTrips = tripMemberStore.getTripMembersByMemberId(member_id.value)
+  if (!memberId.value) return 0
+  if (!memberId.value) return 0
+  const memberTrips = tripMemberStore.getTripMembersByMemberId(memberId.value)
   let totalDebt = 0;
 
   memberTrips.forEach(memberTrip => {
     const debts = expenseStore.calculateDebts(memberTrip.trip_id);
     debts.forEach(debt => {
-      if (debt.fromUserId === member_id.value) {
+      if (debt.fromUserId === memberId.value) {
         totalDebt += debt.amount;
       }
     });
   });
 
   return totalDebt;
-});
+})
 
 const items = computed(() => {
-  const memberTrips = tripMemberStore.getTripMembersByMemberId(member_id.value)
+  if (!memberId.value) return []
+  const memberTrips = tripMemberStore.getTripMembersByMemberId(memberId.value)
   return memberTrips
     .map(member => tripStore.getTripById(member.trip_id))
     .filter(trip => trip !== null)
