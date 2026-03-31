@@ -128,7 +128,7 @@
                 v-for="expense in recentExpenses"
                 :key="expense.id"
                 :expense="expense"
-                :currentUserId="currentUserId"
+                :currentUserId="currentUserId ?? undefined"
                 @tap="openExpenseDetails"
               />
             </StackLayout>
@@ -168,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, $navigateBack, $navigateTo, $closeModal, $showModal } from 'nativescript-vue'
+import { ref, computed, onMounted, $navigateBack, $navigateTo } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
@@ -178,7 +178,7 @@ import { useUserStore } from '~/stores/userStore'
 import type { Trip } from '~/models/trip'
 import type { ExpenseType } from '~/models/type_of_expense'
 import ExpenseCard from '~/components/UI/ExpenseCard.vue'
-import AddExpenseDialog from '~/components/AddExpenseDialog.vue'
+import AddExpenseDialog from './AddExpenseDialog.vue'
 import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
 import ExpenseDetails from './ExpenseDetails.vue'
 import { GridLayout, Label, StackLayout } from '@nativescript/core'
@@ -198,7 +198,7 @@ const trip = ref<Trip | null>(null)
 const showBudgetDialog = ref(false)
 const selectedCategory = ref<ExpenseType | null>(null)
 const selectedCategoryBudget = ref(0)
-const currentUserId = ref(2) // TODO: взять из authStore
+const currentUserId = computed(() => userStore.currentUserId)
 
 onMounted(() => {
   trip.value = tripStore.getTripById(props.tripId)
@@ -324,16 +324,9 @@ const onDelete = () => {
 }
 
 const showAddExpense = () => {
-  console.log('OPEN MODAL')
-  $showModal(AddExpenseDialog, {
+  $navigateTo(AddExpenseDialog, {
     props: {
       tripId: props.tripId
-    },
-    context: {},
-    fullscreen: true,
-    closeCallback: () => {
-      // Обновляем данные после закрытия
-      onExpenseAdded()
     }
   })
 }
@@ -347,8 +340,6 @@ const openExpenseDetails = (expenseId: number) => {
   })
 }
 
-const onExpenseAdded = () => {
-}
 </script>
 
 <style scoped>
@@ -699,3 +690,4 @@ const onExpenseAdded = () => {
   font-weight: 500;
 }
 </style>
+
