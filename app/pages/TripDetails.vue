@@ -4,31 +4,29 @@
     <GridLayout rows="auto, *">
 
       <GridLayout
-        columns="auto, *"
-        height="30"
-        marginTop="24"
-        paddingLeft="24"
-        paddingRight="24"
+      columns="auto, *"
+      height="30"
+      marginTop="24"
+      paddingLeft="24"
+      paddingRight="24"
       >
-        <Button
-          col="0"
+      <GridLayout
+        col="0"
+        width="30"
+        height="30"
+        @tap="$navigateBack"
+        rippleColor="#ccc"
+      >
+        <Image
+          src="~/assets/icons/Arrow_left.png"
           width="30"
           height="30"
-          backgroundColor="transparent"
-          borderWidth="0"
-          @tap="$navigateBack"
-        >
-          <!-- хз картинка не работает 2 часа пытался фиксить устал -->
-          <Image
-            src="~/assets/icons/Arrow_left.png"
-            width="30"
-            height="30"
-            stretch="aspectFit"
-          />
-        </Button>
+          stretch="aspectFit"
+        />
+  </GridLayout>
 
-        <StackLayout col="1" />
-      </GridLayout>
+  <StackLayout col="1" />
+</GridLayout>
 
       <ScrollView row="1">
         <StackLayout class="p-4">
@@ -704,3 +702,4 @@ const openExpenseDetails = (expenseId: number) => {
   font-weight: 500;
 }
 </style>
+
