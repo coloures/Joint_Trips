@@ -71,11 +71,12 @@ const userStore = useUserStore()
 
 const debts = computed(() => expenseStore.calculateDebts(props.tripId))
 
-const currentUserId = 2 // TODO: позже заменишь на authStore.getCurrentUserId()
+const currentUserId = computed(() => userStore.currentUserId)
 
 const totalMyDebt = computed(() => {
+  if (!currentUserId.value) return 0
   return debts.value
-    .filter(d => d.fromUserId === currentUserId)
+    .filter(d => d.fromUserId === currentUserId.value)
     .reduce((sum, d) => sum + d.amount, 0)
 })
 
