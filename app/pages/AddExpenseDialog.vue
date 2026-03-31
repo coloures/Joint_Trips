@@ -1,98 +1,102 @@
 <template>
-  <Page modal="true" backgroundColor="white">
-    <StackLayout class="dialog-container">
-      <StackLayout class="dialog-content">
-        <Label text="➕ Добавить расход" class="dialog-title" />
-        
-        <TextField 
-          v-model="expenseDescription"
-          hint="Описание расхода *" 
-          class="input"
-        />
-        
-        <TextField 
-          v-model="expenseAmount"
-          hint="Сумма *" 
-          keyboard-type="number"
-          class="input"
-        />
-        
-        <Label text="Категория" class="label" />
-        <ListPicker 
-          :items="categoryNames"
-          :selectedIndex="selectedCategoryIndex"
-          @selectedIndexChange="onCategoryChange"
-          class="list-picker"
-        />
-        
-        <Label 
-          v-if="categoryBudgetWarning" 
-          :text="categoryBudgetWarning" 
-          class="warning"
-        />
-        
-        <Label text="Кто оплатил" class="label" />
-        <ListPicker 
-          :items="payerNames"
-          :selectedIndex="selectedPayerIndex"
-          @selectedIndexChange="onPayerChange"
-          class="list-picker"
-        />
-        
-        <TextField 
-          v-model="expenseDate"
-          hint="Дата (ГГГГ-ММ-ДД)" 
-          class="input"
-        />
-        
-        <Label text="За кого:" class="label" />
-        <ScrollView height="200">
-          <StackLayout>
-            <GridLayout 
-              v-for="participant in participants" 
-              :key="participant.member_id"
-              columns="auto, *"
-              class="participant-row"
-              @tap="toggleParticipant(participant.member_id)"
-            >
-              <Label 
-                col="0"
-                :text="selectedParticipants[participant.member_id] ? '☑️' : '⬜'"
-                class="checkbox"
-              />
-              <Label 
-                col="1"
-                :text="getUserName(participant.member_id)"
-                class="participant-name"
-              />
-            </GridLayout>
-          </StackLayout>
-        </ScrollView>
-        
-        <Label v-if="error" :text="error" class="error" />
-        
-        <GridLayout columns="*, *" class="dialog-buttons">
-          <Button text="Отмена" class="btn-outline" @tap="close" />
-          <Button text="Добавить" class="btn-primary" @tap="addExpense" />
-        </GridLayout>
+  <Page backgroundColor="white">
+    <ActionBar title="Добавить расход" backgroundColor="#3b82f6" color="white">
+      <NavigationButton text="Назад" android.systemIcon="ic_menu_back" @tap="close" />
+    </ActionBar>
+    <ScrollView>
+      <StackLayout class="dialog-container">
+        <StackLayout class="dialog-content">
+          <Label text="➕ Добавить расход" class="dialog-title" />
+          
+          <TextField 
+            v-model="expenseDescription"
+            hint="Описание расхода *" 
+            class="input"
+          />
+          
+          <TextField 
+            v-model="expenseAmount"
+            hint="Сумма *" 
+            keyboard-type="number"
+            class="input"
+          />
+          
+          <Label text="Категория" class="label" />
+          <DropDown
+            :items="categoryNames"
+            :selectedIndex="selectedCategoryIndex"
+            @selectedIndexChanged="onCategoryChange"
+            class="dropdown"
+          />
+          
+          <Label 
+            v-if="categoryBudgetWarning" 
+            :text="categoryBudgetWarning" 
+            class="warning"
+          />
+          
+          <Label text="Кто оплатил" class="label" />
+          <DropDown
+            :items="payerNames"
+            :selectedIndex="selectedPayerIndex"
+            @selectedIndexChanged="onPayerChange"
+            class="dropdown"
+          />
+          
+          <TextField 
+            v-model="expenseDate"
+            hint="Дата (ГГГГ-ММ-ДД)" 
+            class="input"
+          />
+          
+          <Label text="За кого:" class="label" />
+          <ScrollView height="200" class="participants-wrapper">
+            <StackLayout>
+              <GridLayout 
+                v-for="participant in participants" 
+                :key="participant.member_id"
+                columns="auto, *"
+                class="participant-row"
+                @tap="toggleParticipant(participant.member_id)"
+              >
+                <Label 
+                  col="0"
+                  :text="selectedParticipants[participant.member_id] ? '☑️' : '⬜'"
+                  class="checkbox"
+                />
+                <Label 
+                  col="1"
+                  :text="getUserName(participant.member_id)"
+                  class="participant-name"
+                />
+              </GridLayout>
+            </StackLayout>
+          </ScrollView>
+          
+          <Label v-if="error" :text="error" class="error" />
+          
+          <GridLayout columns="*, *" class="dialog-buttons">
+            <Button text="Отмена" class="btn-outline" @tap="close" />
+            <Button text="Добавить" class="btn-primary" @tap="addExpense" />
+          </GridLayout>
+        </StackLayout>
       </StackLayout>
-    </StackLayout>
+    </ScrollView>
   </Page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'nativescript-vue'
+import { ref, computed, watch, $navigateBack } from 'nativescript-vue'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
 import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
+import type { SelectedIndexChangedEventData } from 'nativescript-drop-down'
 
 const props = defineProps<{
   tripId: number
 }>()
-
-const emit = defineEmits(['close', 'added'])
 
 const expenseStore = useExpenseStore()
 const tripMemberStore = useTripMemberStore()
@@ -111,6 +115,26 @@ const categoryBudgetWarning = ref('')
 
 const participants = computed(() => tripMemberStore.getTripMembersByTripId(props.tripId))
 const categories = computed(() => expenseTypeStore.getAllExpenseTypes())
+
+watch(
+  categories,
+  (value) => {
+    if (!selectedCategoryId.value && value.length) {
+      selectedCategoryId.value = value[0].id
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  participants,
+  (value) => {
+    if (!selectedPayerId.value && value.length) {
+      selectedPayerId.value = value[0].member_id
+    }
+  },
+  { immediate: true }
+)
 
 const categoryNames = computed(() => categories.value.map(c => c.name))
 const payerNames = computed(() => participants.value.map(p => getUserName(p.member_id)))
@@ -183,16 +207,16 @@ watch([expenseAmount, selectedCategoryId], ([amount, categoryId]) => {
   }
 })
 
-const onCategoryChange = (args: any) => {
-  const index = args.value
-  if (categories.value[index]) {
+const onCategoryChange = (args: SelectedIndexChangedEventData) => {
+  const index = args.newIndex
+  if (index >= 0 && categories.value[index]) {
     selectedCategoryId.value = categories.value[index].id
   }
 }
 
-const onPayerChange = (args: any) => {
-  const index = args.value
-  if (participants.value[index]) {
+const onPayerChange = (args: SelectedIndexChangedEventData) => {
+  const index = args.newIndex
+  if (index >= 0 && participants.value[index]) {
     selectedPayerId.value = participants.value[index].member_id
   }
 }
@@ -246,28 +270,30 @@ const addExpense = () => {
       amount: amountPerPerson
     })
   })
-  emit('close')
+  close()
 }
 
 const close = () => {
-  emit('close')
+  $navigateBack()
 }
 </script>
 
 <style scoped>
 .dialog-container {
-  background-color: white;
-  height: 100%;
-  justify-content: center;
-  align-items: center;
+  padding: 16;
 }
 
 .dialog-content {
   background-color: white;
   border-radius: 16;
   padding: 20;
-  width: 90%;
-  max-height: 90%;
+  width: 100%;
+  elevation: 2;
+  shadow-color: #000;
+  shadow-offset: 0 2;
+  shadow-opacity: 0.08;
+  shadow-radius: 6;
+  margin-bottom: 16;
 }
 
 .dialog-title {
@@ -294,13 +320,23 @@ const close = () => {
   color: #374151;
 }
 
-.list-picker {
+.dropdown {
   border-width: 1;
   border-color: #d1d5db;
   border-radius: 8;
-  padding: 8;
   margin-bottom: 8;
-  height: 40;
+  height: 44;
+  padding: 4 8;
+  background-color: white;
+}
+
+.participants-wrapper {
+  max-height: 200;
+  margin-top: 4;
+  border-width: 1;
+  border-color: #f3f4f6;
+  border-radius: 8;
+  padding: 4;
 }
 
 .participant-row {
