@@ -181,7 +181,7 @@ import ExpenseCard from '~/components/UI/ExpenseCard.vue'
 import AddExpenseDialog from './AddExpenseDialog.vue'
 import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
 import ExpenseDetails from './ExpenseDetails.vue'
-import { GridLayout, Label, StackLayout } from '@nativescript/core'
+import { GridLayout, Label, StackLayout, confirm } from '@nativescript/core'
 
 const props = defineProps<{
   tripId: number
@@ -316,10 +316,21 @@ const onEdit = () => {
   console.log('Редактировать:', trip.value?.id)
 }
 
-const onDelete = () => {
-  if (trip.value && confirm('Удалить эту поездку?')) {
-    tripStore.deleteTrip(trip.value.id)
-    $navigateBack()
+const onDelete = async () => {
+  if (trip.value) {
+    // Ждем, пока пользователь нажмет "ОК" или "Отмена"
+    const result = await confirm({
+      title: "Удаление поездки",
+      message: "Вы уверены, что хотите удалить эту поездку? Это действие нельзя отменить.",
+      okButtonText: "Удалить",
+      cancelButtonText: "Отмена"
+    });
+
+    // Если пользователь нажал "Удалить" (result === true)
+    if (result) {
+      tripStore.deleteTrip(trip.value.id);
+      $navigateBack();
+    }
   }
 }
 
