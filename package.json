@@ -6,12 +6,14 @@
   "dependencies": {
     "@nativescript/core": "~9.0.0",
     "@xstate/vue": "^5.0.0",
+    "nativescript": "^9.0.5",
     "nativescript-vue": "^3.0.0",
     "pinia": "^3.0.4",
     "xstate": "^5.29.0"
   },
   "devDependencies": {
     "@nativescript/android": "9.0.2",
+    "@nativescript/preview-cli": "1.0.14",
     "@nativescript/tailwind": "^4.0.0",
     "@nativescript/types": "~9.0.0",
     "@nativescript/webpack": "~5.0.31",
