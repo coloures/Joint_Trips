@@ -3,32 +3,30 @@
     <ActionBar class="hidden" />
     <GridLayout rows="auto, *">
 
-      <GridLayout 
-        columns="auto, *" 
-        height="30"
-        marginTop="24"
-        paddingLeft="24"
-        paddingRight="24"
+      <GridLayout
+      columns="auto, *"
+      height="30"
+      marginTop="24"
+      paddingLeft="24"
+      paddingRight="24"
       >
-        <Button 
-          col="0"
+      <GridLayout
+        col="0"
+        width="30"
+        height="30"
+        @tap="$navigateBack"
+        rippleColor="#ccc"
+      >
+        <Image
+          src="~/assets/icons/Arrow_left.png"
           width="30"
           height="30"
-          backgroundColor="transparent"
-          borderWidth="0"
-          @tap="$navigateBack"
-        >
-          <!-- хз картинка не работает 2 часа пытался фиксить устал -->
-          <Image
-            src="~/assets/icons/Arrow_left.png" 
-            width="30"
-            height="30"
-            stretch="aspectFit"
-          />
-        </Button>
-        
-        <StackLayout col="1" />
-      </GridLayout>
+          stretch="aspectFit"
+        />
+  </GridLayout>
+
+  <StackLayout col="1" />
+</GridLayout>
 
       <ScrollView row="1">
         <StackLayout class="p-4">
@@ -36,35 +34,18 @@
           <StackLayout>
             <Label class="trip-title" text="Поездка в" horizontalAlignment="center"/>
             <Label class="trip-title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
-            <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center"/>
+            <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
           </StackLayout>
 
-          <StackLayout class="info-block">
-            <Label :text="`${trip?.emoji} ${trip?.title}`" class="title" />
-            <Label :text="trip?.country" class="subtitle" />
+          <GridLayout class="particapantsmain"columns="auto, auto, auto" rows="auto">
 
-            <GridLayout columns="auto, *" class="info-row">
-              <Label text="📅" col="0" class="icon" />
-              <Label :text="formattedDates" col="1" />
-            </GridLayout>
+            <StackLayout orientation="vertical" col="0" marginTop="4">
+               <Label class="trip-title" text="Участники"/>
+               <Label class="trip-title3" :text="`${participantsCount} человек`" marginTop="8" />
+            </StackLayout>
+          </GridLayout>
 
-            <GridLayout columns="auto, *" class="info-row">
-              <Label text="💰" col="0" class="icon" />
-              <Label :text="formattedBudget" col="1" />
-            </GridLayout>
 
-            <GridLayout columns="auto, *" class="info-row">
-              <Label text="👥" col="0" class="icon" />
-              <Label :text="`${participantsCount} участников`" col="1" />
-            </GridLayout>
-
-            <Label 
-              v-if="trip?.description" 
-              :text="trip.description" 
-              class="description"
-              textWrap="true"
-            />
-          </StackLayout>
 
           <StackLayout class="separator" />
 
@@ -73,7 +54,7 @@
               <Label text="💰 Бюджет поездки" class="section-title" />
               <Button text="✎ Редактировать" class="edit-budget-btn" @tap="showEditBudgetDialog" />
             </GridLayout>
-            
+
             <GridLayout columns="*, *" class="budget-stats">
               <StackLayout class="stat-card">
                 <Label text="Общий бюджет" class="stat-label" />
@@ -84,11 +65,11 @@
                 <Label :text="`${totalExpenses.toLocaleString('ru-RU')} ₽`" class="stat-value" />
               </StackLayout>
             </GridLayout>
-            
+
             <GridLayout columns="*, *" class="budget-stats">
               <StackLayout class="stat-card">
                 <Label text="Осталось" class="stat-label" />
-                <Label :text="`${remainingBudget.toLocaleString('ru-RU')} ₽`" 
+                <Label :text="`${remainingBudget.toLocaleString('ru-RU')} ₽`"
                       :class="remainingBudget >= 0 ? 'stat-value positive' : 'stat-value negative'" />
               </StackLayout>
               <StackLayout class="stat-card">
@@ -96,15 +77,15 @@
                 <Label :text="`${usagePercentage.toFixed(0)}%`" class="stat-value" />
               </StackLayout>
             </GridLayout>
-            
+
             <Progress :value="usagePercentage" :maxValue="100" class="budget-progress" />
-            
+
             <!-- Бюджет по категориям -->
             <StackLayout class="categories-budget">
               <Label text="📊 Бюджет по категориям" class="categories-title" />
-              
-              <StackLayout 
-                v-for="category in categoriesWithBudget" 
+
+              <StackLayout
+                v-for="category in categoriesWithBudget"
                 :key="category.id"
                 class="category-budget-item"
                 @tap="editCategoryBudget(category)"
@@ -112,22 +93,22 @@
                 <GridLayout columns="auto, *, auto">
                   <Label :text="getCategoryEmoji(category.name)" col="0" class="category-emoji" />
                   <Label :text="category.name" col="1" class="category-name" />
-                  <Label 
-                    :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ₽` : 'Не указан'" 
-                    col="2" 
+                  <Label
+                    :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ₽` : 'Не указан'"
+                    col="2"
                     class="category-amount"
                     :class="{ 'no-budget': !categoryBudgetMap[category.id] }"
                   />
                 </GridLayout>
-                <Progress 
+                <Progress
                   v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
-                  :value="getCategoryPercentage(category.id)" 
-                  :maxValue="100" 
+                  :value="getCategoryPercentage(category.id)"
+                  :maxValue="100"
                   class="category-progress"
                 />
-                <Label 
+                <Label
                   v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
-                  :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ₽`" 
+                  :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ₽`"
                   class="category-spent"
                 />
               </StackLayout>
@@ -141,17 +122,17 @@
               <Label text="📝 Последние расходы" class="section-title" />
               <Button text="+ Добавить" class="add-expense-btn" @tap="showAddExpense" />
             </StackLayout>
-            
+
             <StackLayout v-if="recentExpenses.length > 0" class="expenses-list">
-              <ExpenseCard 
-                v-for="expense in recentExpenses" 
+              <ExpenseCard
+                v-for="expense in recentExpenses"
                 :key="expense.id"
                 :expense="expense"
                 :currentUserId="currentUserId"
                 @tap="openExpenseDetails"
               />
             </StackLayout>
-            
+
             <StackLayout v-else class="empty-expenses">
               <Label text="💰" class="empty-icon" />
               <Label text="Нет расходов" class="empty-text" />
@@ -165,7 +146,7 @@
             <Button col="0" text="✏️ Редактировать" class="btn-primary" @tap="onEdit" />
             <Button col="1" text="🗑️ Удалить" class="btn-outline" @tap="onDelete" />
           </GridLayout>
-          
+
           <StackLayout height="30" />
         </StackLayout>
       </ScrollView>
@@ -175,7 +156,7 @@
 
 
     <!-- Диалог редактирования бюджета категории -->
-    <EditCategoryBudgetDialog 
+    <EditCategoryBudgetDialog
       v-if="showBudgetDialog"
       :tripId="tripId"
       :category="selectedCategory"
@@ -200,7 +181,7 @@ import ExpenseCard from '~/components/UI/ExpenseCard.vue'
 import AddExpenseDialog from '~/components/AddExpenseDialog.vue'
 import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
 import ExpenseDetails from './ExpenseDetails.vue'
-import { StackLayout } from '@nativescript/core'
+import { GridLayout, Label, StackLayout } from '@nativescript/core'
 
 const props = defineProps<{
   tripId: number
@@ -325,7 +306,7 @@ const onBudgetSaved = () => {
 // Расходы (последние 5)
 const recentExpenses = computed(() => {
   const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
-  return [...allExpenses].sort((a, b) => 
+  return [...allExpenses].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   ).slice(0, 5)
 })
@@ -392,9 +373,32 @@ const onExpenseAdded = () => {
 .trip-title3 {
   font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
   font-size: 20;
-  margin-top: 16;
   font-weight: light;
   color: #6F7071;
+}
+
+.particapantsmain {
+  margin-top: 32;
+  padding-bottom: 20;
+  padding-top: 20;
+  padding-left: 24;
+  background-color: white;
+  border-radius: 24;
+  elevation: 8;
+  width: 354;
+  height: 130;
+  shadow-radius: 8; /* iOS */
+  shadow-color: #000000;
+  shadow-opacity: 0.9;
+  shadow-offset-width: 0;
+  shadow-offset-height: 4;
+}
+
+.bigtext{
+  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
+  font-size: 20;
+  font-weight: bold;
+  color: 313132;
 }
 
 .hidden {
