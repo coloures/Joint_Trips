@@ -109,6 +109,27 @@
         </StackLayout>
 
         <!-- 🔹 Виджет долгов -->
+        <StackLayout class="separator" />
+
+        <StackLayout class="invite-widget">
+          <Label text="Пригласить участника" class="section-title" />
+          <Label text="Введите номер телефона, чтобы отправить приглашение в поездку. Пользователь получит уведомление и позже сможет принять или отклонить его." class="invite-hint" textWrap="true" />
+          <TextField 
+            v-model="invitePhone"
+            hint="+7 916 123 45 67"
+            keyboardType="phone"
+            class="invite-input"
+          />
+          <Button 
+            class="btn-primary invite-btn"
+            text="Пригласить участника"
+            :isEnabled="canInviteParticipant"
+            @tap="sendTripInvite"
+          />
+          <Label v-if="inviteError" :text="inviteError" class="invite-error" textWrap="true" />
+          <Label v-if="inviteSuccess" :text="inviteSuccess" class="invite-success" textWrap="true" />
+        </StackLayout>
+
         <DebtsWidget :tripId="props.tripId" />
 
         <!-- Разделитель -->
@@ -126,7 +147,7 @@
               v-for="expense in recentExpenses" 
               :key="expense.id"
               :expense="expense"
-              :currentUserId="currentUserId"
+              :currentUserId="currentUserId ?? undefined"
               @tap="openExpenseDetails"
             />
           </StackLayout>
@@ -171,6 +192,7 @@ import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
 import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
+import { useNotificationStore } from '~/stores/notificationStore'
 import { useUserStore } from '~/stores/userStore'
 import type { Trip } from '~/models/trip'
 import type { ExpenseType } from '~/models/type_of_expense'
@@ -189,6 +211,7 @@ const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
 const expenseTypeStore = useExpenseTypeStore()
 const budgetCategoryStore = useTripBudgetCategoryStore()
+const notificationStore = useNotificationStore()
 const userStore = useUserStore()
 
 const trip = ref<Trip | null>(null)
@@ -196,6 +219,13 @@ const showBudgetDialog = ref(false)
 const selectedCategory = ref<ExpenseType | null>(null)
 const selectedCategoryBudget = ref(0)
 const currentUserId = computed(() => userStore.currentUserId)
+const invitePhone = ref('')
+const inviteError = ref('')
+const inviteSuccess = ref('')
+const isInvitingParticipant = ref(false)
+const canInviteParticipant = computed(() => {
+  return invitePhone.value.trim().length > 0 && !isInvitingParticipant.value
+})
 
 onMounted(() => {
   trip.value = tripStore.getTripById(props.tripId)
@@ -317,6 +347,74 @@ const onDelete = () => {
   if (trip.value && confirm('Удалить эту поездку?')) {
     tripStore.deleteTrip(trip.value.id)
     $navigateBack()
+  }
+}
+
+const normalizePhoneInput = (value: string) => {
+  return value.trim().replace(/[^+\d]/g, '')
+}
+
+const sendTripInvite = () => {
+  inviteError.value = ''
+  inviteSuccess.value = ''
+
+  const phoneValue = invitePhone.value
+  if (!phoneValue.trim()) {
+    inviteError.value = 'Введите номер телефона'
+    return
+  }
+
+  const normalizedPhone = normalizePhoneInput(phoneValue)
+  if (normalizedPhone.length < 2) {
+    inviteError.value = 'Введите корректный номер телефона'
+    return
+  }
+
+  const targetUser = userStore.getUserByPhoneNumber(normalizedPhone)
+  if (!targetUser) {
+    inviteError.value = 'Пользователь с таким номером не найден'
+    return
+  }
+
+  if (targetUser.id === currentUserId.value) {
+    inviteError.value = 'Вы уже участвуете в этой поездке'
+    return
+  }
+
+  const existingMembers = tripMemberStore.getTripMembersByTripId(props.tripId)
+  const existingMember = existingMembers.find(member => member.member_id === targetUser.id)
+  if (existingMember) {
+    inviteError.value = existingMember.status === 'pending'
+      ? 'Пользователь уже приглашён'
+      : 'Пользователь уже участник поездки'
+    return
+  }
+
+  isInvitingParticipant.value = true
+  try {
+    tripMemberStore.addTripMember({
+      trip_id: props.tripId,
+      member_id: targetUser.id,
+      status: 'pending',
+      role: 'participant'
+    })
+
+    const tripTitle = trip.value?.title ? `«${trip.value.title}»` : 'поездку'
+    notificationStore.addNotification({
+      trip_id: props.tripId,
+      user_id: targetUser.id,
+      type: 'trip_invite',
+      message: `Вас пригласили в поездку ${tripTitle}`,
+      is_read: false,
+      created_at: new Date().toISOString()
+    })
+
+    inviteSuccess.value = `Приглашение отправлено${targetUser.first_name ? ` для ${targetUser.first_name}` : ''}`
+    invitePhone.value = ''
+  } catch (error: any) {
+    inviteError.value = error?.message || 'Не удалось отправить приглашение'
+  } finally {
+    isInvitingParticipant.value = false
   }
 }
 
@@ -606,5 +704,46 @@ const openExpenseDetails = (expenseId: number) => {
   border-radius: 10;
   font-size: 14;
   font-weight: 500;
+}
+
+.invite-widget {
+  background-color: white;
+  border-radius: 16;
+  padding: 16;
+  border-width: 1;
+  border-color: #e5e7eb;
+  margin-bottom: 16;
+}
+
+.invite-hint {
+  font-size: 12;
+  color: #6b7280;
+  margin-bottom: 12;
+}
+
+.invite-input {
+  border-width: 1;
+  border-color: #d1d5db;
+  border-radius: 10;
+  padding: 12 16;
+  font-size: 16;
+  background-color: #f9fafb;
+  margin-bottom: 12;
+}
+
+.invite-btn {
+  margin-bottom: 4;
+}
+
+.invite-error {
+  color: #ef4444;
+  font-size: 12;
+  margin-top: 6;
+}
+
+.invite-success {
+  color: #10b981;
+  font-size: 12;
+  margin-top: 6;
 }
 </style>
