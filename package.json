@@ -7,9 +7,9 @@
     "@nativescript/core": "~9.0.0",
     "@xstate/vue": "^5.0.0",
     "nativescript": "^9.0.5",
+    "nativescript-drop-down": "^6.0.2",
     "nativescript-vue": "^3.0.0",
     "pinia": "^3.0.4",
-    "nativescript-drop-down": "^6.0.2",
     "xstate": "^5.29.0"
   },
   "devDependencies": {
