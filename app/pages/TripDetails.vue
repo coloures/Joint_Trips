@@ -45,21 +45,12 @@
 
             <StackLayout orientation="horizontal" col="1">
               <Image
-              class="particapants-image"
-              src="~/assets/icons/Arrow_left.png"
-              stretch="aspectFit"
+                v-for="participant in particapantsAvatar"
+                :key="participant.memberId"
+                :src="participant.avatar"
+                class="particapants-image"
+                stretch="aspectFit"
             />
-            <Image
-              class="particapants-image"
-              src="~/assets/icons/Arrow_left.png"
-              stretch="aspectFit"
-            />
-            <Image
-              class="particapants-image"
-              src="~/assets/icons/Arrow_left.png"
-              stretch="aspectFit"
-            />
-
             </StackLayout>
           </GridLayout>
 
@@ -98,7 +89,7 @@
 
             <!-- Бюджет по категориям -->
             <StackLayout class="categories-budget">
-              <Label text="📊 Бюджет по категориям" class="categories-title" />
+              <Label text="📊 Расходы по категориям" class="categories-title" />
 
               <StackLayout
                 v-for="category in categoriesWithBudget"
@@ -235,12 +226,18 @@ const participantsCount = computed(() => {
 })
 
 const particapantsIDs = computed(() => {
-  if (!trip.value) return 0
+  if (!trip.value) return []
   return tripMemberStore.getTripMembersByTripId(trip.value.id)
 })
 
 const particapantsAvatar = computed(() => {
-
+  return particapantsIDs.value.map(participant => {
+    const user = userStore.getUserById(participant.member_id)
+    return {
+      memberId: participant.member_id,
+      avatar: user?.avatar || `https://i.pravatar.cc/150?u=member-${participant.member_id}`
+    }
+  })
 })
 
 // Бюджет
@@ -450,12 +447,10 @@ const openExpenseDetails = (expenseId: number) => {
 }
 
 .particapants-image {
-  padding-right: 8;
+  margin-right: 8;
   width: 80;
   height: 80;
   border-radius: 24;
-  background-color: #9ca3af;
-  ;
 }
 
 /* SVG изображение внутри кнопки */
