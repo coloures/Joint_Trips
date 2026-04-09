@@ -2,7 +2,7 @@
   {
     "id": 1,
     "trip_id": 1,
-    "member_id": 1,
+    "member_id": 6,
     "status": "confirmed",
     "role": "organizer"
   },
@@ -30,7 +30,14 @@
   {
     "id": 5,
     "trip_id": 3,
-    "member_id": 1,
+    "member_id": 6,
+    "status": "confirmed",
+    "role": "organizer"
+  },
+  {
+    "id": 6,
+    "trip_id": 1,
+    "member_id": 4,
     "status": "confirmed",
     "role": "organizer"
   }

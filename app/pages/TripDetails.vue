@@ -10,44 +10,46 @@
       paddingLeft="24"
       paddingRight="24"
       >
-      <GridLayout
-        col="0"
-        width="30"
-        height="30"
-        @tap="$navigateBack"
-        rippleColor="#ccc"
-      >
-        <Image
-          src="~/assets/icons/Arrow_left.png"
+        <GridLayout
+          col="0"
           width="30"
           height="30"
-          stretch="aspectFit"
-        />
-  </GridLayout>
+          @tap="$navigateBack"
+          rippleColor="#ccc"
+        >
+            <Image
+              src="~/assets/icons/Arrow_left.png"
+              width="30"
+              height="30"
+              stretch="aspectFit"
+            />
 
-  <StackLayout col="1" />
-</GridLayout>
+        </GridLayout>
+      </GridLayout>
 
       <ScrollView row="1">
         <StackLayout class="p-4">
 
+          --Наименование и дата
           <StackLayout>
             <Label class="trip-title" text="Поездка в" horizontalAlignment="center"/>
             <Label class="trip-title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
             <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
           </StackLayout>
 
-          <GridLayout class="particapantsmain"columns="auto, auto, auto" rows="auto">
-
-            <StackLayout orientation="vertical" col="0" marginTop="4">
+          --Список участников
+          <GridLayout class="particapantsmain" columns="auto, auto" rows="auto">
+            <StackLayout orientation="vertical" col="0" marginTop="4" marginRight="24">
                <Label class="trip-title" text="Участники"/>
                <Label class="trip-title3" :text="`${participantsCount} человек`" marginTop="8" />
+            </StackLayout>
+
+            <StackLayout orientation="horizontal" col="1">
+
             </StackLayout>
           </GridLayout>
 
 
-
-          <StackLayout class="separator" />
 
           <StackLayout class="budget-widget">
             <GridLayout columns="*, auto" class="budget-header">
@@ -115,8 +117,6 @@
             </StackLayout>
           </StackLayout>
 
-          <StackLayout class="separator" />
-
           <StackLayout class="expenses-section">
             <StackLayout class="section-header">
               <Label text="📝 Последние расходы" class="section-title" />
@@ -140,14 +140,11 @@
             </StackLayout>
           </StackLayout>
 
-          <StackLayout class="separator" />
-
           <GridLayout columns="*, *" class="actions" rows="auto">
             <Button col="0" text="✏️ Редактировать" class="btn-primary" @tap="onEdit" />
             <Button col="1" text="🗑️ Удалить" class="btn-outline" @tap="onDelete" />
           </GridLayout>
 
-          <StackLayout height="30" />
         </StackLayout>
       </ScrollView>
 
@@ -221,6 +218,11 @@ const formattedBudget = computed(() => {
 const participantsCount = computed(() => {
   if (!trip.value) return 0
   return tripMemberStore.getTripMembersByTripId(trip.value.id).length
+})
+
+const particapantsIDs = computed(() => {
+  if (!trip.value) return 0
+  return tripMemberStore.getTripMembersByTripId(trip.value.id)
 })
 
 // Бюджет
