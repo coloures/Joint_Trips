@@ -23,7 +23,6 @@
               height="30"
               stretch="aspectFit"
             />
-
         </GridLayout>
       </GridLayout>
 
@@ -45,6 +44,21 @@
             </StackLayout>
 
             <StackLayout orientation="horizontal" col="1">
+              <Image
+              class="particapants-image"
+              src="~/assets/icons/Arrow_left.png"
+              stretch="aspectFit"
+            />
+            <Image
+              class="particapants-image"
+              src="~/assets/icons/Arrow_left.png"
+              stretch="aspectFit"
+            />
+            <Image
+              class="particapants-image"
+              src="~/assets/icons/Arrow_left.png"
+              stretch="aspectFit"
+            />
 
             </StackLayout>
           </GridLayout>
@@ -225,6 +239,10 @@ const particapantsIDs = computed(() => {
   return tripMemberStore.getTripMembersByTripId(trip.value.id)
 })
 
+const particapantsAvatar = computed(() => {
+
+})
+
 // Бюджет
 const totalBudget = computed(() => trip.value?.budget || 0)
 const totalExpenses = computed(() => {
@@ -384,17 +402,16 @@ const openExpenseDetails = (expenseId: number) => {
 
 .particapantsmain {
   margin-top: 32;
-  padding-bottom: 20;
   padding-top: 20;
   padding-left: 24;
   background-color: white;
   border-radius: 24;
   elevation: 8;
   width: 354;
-  height: 130;
+  height: 120;
   shadow-radius: 8; /* iOS */
   shadow-color: #000000;
-  shadow-opacity: 0.9;
+  shadow-opacity: 0.5;
   shadow-offset-width: 0;
   shadow-offset-height: 4;
 }
@@ -430,6 +447,15 @@ const openExpenseDetails = (expenseId: number) => {
   padding: 0;
   margin: 0;
   border-radius: 0;
+}
+
+.particapants-image {
+  padding-right: 8;
+  width: 80;
+  height: 80;
+  border-radius: 24;
+  background-color: #9ca3af;
+  ;
 }
 
 /* SVG изображение внутри кнопки */
