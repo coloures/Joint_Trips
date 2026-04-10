@@ -1,164 +1,157 @@
 <template>
   <Page>
-    <ActionBar :title="trip?.title || 'Поездка'" backgroundColor="#3b82f6" color="white">
-      <ActionItem 
-        android:position="actionBar" 
-        text="❮ Назад"
-        @tap="$navigateBack"
-      /> 
-    </ActionBar>
+    <ActionBar class="hidden" />
+    <GridLayout rows="auto, *">
 
-    <ScrollView>
-      <StackLayout class="p-4">
-        <!-- Основная информация -->
-        <StackLayout class="info-block">
-          <Label :text="`${trip?.emoji} ${trip?.title}`" class="title" />
-          <Label :text="trip?.country" class="subtitle" />
-
-          <GridLayout columns="auto, *" class="info-row">
-            <Label text="📅" col="0" class="icon" />
-            <Label :text="formattedDates" col="1" />
-          </GridLayout>
-
-          <GridLayout columns="auto, *" class="info-row">
-            <Label text="💰" col="0" class="icon" />
-            <Label :text="formattedBudget" col="1" />
-          </GridLayout>
-
-          <GridLayout columns="auto, *" class="info-row">
-            <Label text="👥" col="0" class="icon" />
-            <Label :text="`${participantsCount} участников`" col="1" />
-          </GridLayout>
-
-          <Label 
-            v-if="trip?.description" 
-            :text="trip.description" 
-            class="description"
-            textWrap="true"
-          />
-        </StackLayout>
-
-        <!-- Разделитель -->
-        <StackLayout class="separator" />
-
-        <!-- 🔹 Бюджетный виджет (сенсорный) -->
-        <StackLayout class="budget-widget">
-          <GridLayout columns="*, auto" class="budget-header">
-            <Label text="💰 Бюджет поездки" class="section-title" />
-            <Button text="✎ Редактировать" class="edit-budget-btn" @tap="showEditBudgetDialog" />
-          </GridLayout>
-          
-          <GridLayout columns="*, *" class="budget-stats">
-            <StackLayout class="stat-card">
-              <Label text="Общий бюджет" class="stat-label" />
-              <Label :text="`${totalBudget.toLocaleString('ru-RU')} ₽`" class="stat-value" />
-            </StackLayout>
-            <StackLayout class="stat-card">
-              <Label text="Потрачено" class="stat-label" />
-              <Label :text="`${totalExpenses.toLocaleString('ru-RU')} ₽`" class="stat-value" />
-            </StackLayout>
-          </GridLayout>
-          
-          <GridLayout columns="*, *" class="budget-stats">
-            <StackLayout class="stat-card">
-              <Label text="Осталось" class="stat-label" />
-              <Label :text="`${remainingBudget.toLocaleString('ru-RU')} ₽`" 
-                     :class="remainingBudget >= 0 ? 'stat-value positive' : 'stat-value negative'" />
-            </StackLayout>
-            <StackLayout class="stat-card">
-              <Label text="Использовано" class="stat-label" />
-              <Label :text="`${usagePercentage.toFixed(0)}%`" class="stat-value" />
-            </StackLayout>
-          </GridLayout>
-          
-          <Progress :value="usagePercentage" :maxValue="100" class="budget-progress" />
-          
-          <!-- Бюджет по категориям -->
-          <StackLayout class="categories-budget">
-            <Label text="📊 Бюджет по категориям" class="categories-title" />
-            
-            <StackLayout 
-              v-for="category in categoriesWithBudget" 
-              :key="category.id"
-              class="category-budget-item"
-              @tap="editCategoryBudget(category)"
-            >
-              <GridLayout columns="auto, *, auto">
-                <Label :text="getCategoryEmoji(category.name)" col="0" class="category-emoji" />
-                <Label :text="category.name" col="1" class="category-name" />
-                <Label 
-                  :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ₽` : 'Не указан'" 
-                  col="2" 
-                  class="category-amount"
-                  :class="{ 'no-budget': !categoryBudgetMap[category.id] }"
-                />
-              </GridLayout>
-              <Progress 
-                v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
-                :value="getCategoryPercentage(category.id)" 
-                :maxValue="100" 
-                class="category-progress"
-              />
-              <Label 
-                v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
-                :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ₽`" 
-                class="category-spent"
-              />
-            </StackLayout>
-          </StackLayout>
-        </StackLayout>
-
-        <!-- 🔹 Виджет долгов -->
-        <DebtsWidget :tripId="props.tripId" />
-
-        <!-- Разделитель -->
-        <StackLayout class="separator" />
-
-        <!-- 🔹 Расходы -->
-        <StackLayout class="expenses-section">
-          <StackLayout class="section-header">
-            <Label text="📝 Последние расходы" class="section-title" />
-            <Button text="+ Добавить" class="add-expense-btn" @tap="showAddExpense" />
-          </StackLayout>
-          
-          <StackLayout v-if="recentExpenses.length > 0" class="expenses-list">
-            <ExpenseCard 
-              v-for="expense in recentExpenses" 
-              :key="expense.id"
-              :expense="expense"
-              :currentUserId="currentUserId"
-              @tap="openExpenseDetails"
+      <GridLayout
+      columns="auto, *"
+      height="30"
+      marginTop="24"
+      paddingLeft="24"
+      paddingRight="24"
+      >
+        <GridLayout
+          col="0"
+          width="30"
+          height="30"
+          @tap="$navigateBack"
+          rippleColor="#ccc"
+        >
+            <Image
+              src="~/assets/icons/Arrow_left.png"
+              width="30"
+              height="30"
+              stretch="aspectFit"
             />
-          </StackLayout>
-          
-          <StackLayout v-else class="empty-expenses">
-            <Label text="💰" class="empty-icon" />
-            <Label text="Нет расходов" class="empty-text" />
-            <Button text="+ Добавить первый расход" class="btn-add" @tap="showAddExpense" />
-          </StackLayout>
+        </GridLayout>
+      </GridLayout>
+
+      <ScrollView row="1">
+        <StackLayout v-if="isScreenLoading" class="screen-state">
+          <ActivityIndicator busy="true" />
+          <Label text="Загружаем данные поездки..." class="screen-state-text" />
         </StackLayout>
 
-        <!-- Разделитель -->
-        <StackLayout class="separator" />
+        <StackLayout v-else-if="screenError" class="screen-state">
+          <Label :text="screenError" class="screen-state-error" textWrap="true" />
+          <Button text="Повторить" class="btn-primary" @tap="retryTripLoad" />
+        </StackLayout>
 
-        <!-- 🔹 Кнопки действий -->
-        <GridLayout columns="*, *" class="actions" rows="auto">
-          <Button col="0" text="✏️ Редактировать" class="btn-primary" @tap="onEdit" />
-          <Button col="1" text="🗑️ Удалить" class="btn-outline" @tap="onDelete" />
-        </GridLayout>
-        
-        <!-- Отступ снизу -->
-        <StackLayout height="30" />
-      </StackLayout>
-    </ScrollView>
+        <StackLayout v-else class="p-4">
+
+          --Наименование и дата
+          <StackLayout>
+            <Label class="trip-title" text="Поездка в" horizontalAlignment="center"/>
+            <Label class="trip-title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
+            <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
+          </StackLayout>
+
+          --Список участников
+          <GridLayout class="particapantsmain" columns="auto, auto" rows="auto">
+            <StackLayout orientation="vertical" col="0" marginTop="4" marginRight="24">
+               <Label class="trip-title" text="Участники"/>
+               <Label class="trip-title3" :text="`${participantsCount} человек`" marginTop="8" />
+            </StackLayout>
+
+            <StackLayout orientation="horizontal" col="1">
+              <Image
+                v-for="participant in particapantsAvatar"
+                :key="participant.memberId"
+                :src="participant.avatar"
+                class="particapants-image"
+                stretch="aspectFit"
+            />
+            </StackLayout>
+          </GridLayout>
+
+          --Расходы
+          <StackLayout class="expenses-section">
+            <Label text="Расходы" class="trip-title" />
+            <Label text="Общий бюджет на поездку" class="trip-title3" marginTop="8"/>
+            <Label :text="`${totalBudget} ₽`" class="trip-title3" />
+            
+            <StackLayout class="categories-budget">
+              <StackLayout
+                v-for="category in categoriesWithBudget"
+                :key="category.id"
+                class="category-budget-item"
+              >
+
+                <GridLayout columns="auto, *, auto">
+
+                  <Label :text="getCategoryEmoji(category.name)" col="0" class="category-emoji" />
+                  <Label :text="category.name" col="1" class="category-name" />
+                  <Label
+                    :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ₽` : 'Не указан'"
+                    col="2"
+                    class="category-amount"
+                    :class="{ 'no-budget': !categoryBudgetMap[category.id] }"
+                  />
+
+                </GridLayout>
+
+
+                <Progress
+                  v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
+                  :value="getCategoryPercentage(category.id)"
+                  :maxValue="100"
+                  class="category-progress"
+                />
+                <Label
+                  v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
+                  :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ₽`"
+                  class="category-spent"
+                />
+              </StackLayout>
+            </StackLayout>
+          </StackLayout>
+
+
+
+
+
+          <StackLayout class="expenses-section">
+            <StackLayout class="section-header">
+              <Label text="📝 Последние расходы" class="section-title" />
+              <Button text="+ Добавить" class="add-expense-btn" @tap="showAddExpense" />
+            </StackLayout>
+
+            <StackLayout v-if="recentExpenses.length > 0" class="expenses-list">
+              <ExpenseCard
+                v-for="expense in recentExpenses"
+                :key="expense.id"
+                :expense="expense"
+                :currentUserId="currentUserId ?? undefined"
+                @tap="openExpenseDetails"
+              />
+            </StackLayout>
+
+            <StackLayout v-else class="empty-expenses">
+              <Label text="💰" class="empty-icon" />
+              <Label text="Нет расходов" class="empty-text" />
+              <Button text="+ Добавить первый расход" class="btn-add" @tap="showAddExpense" />
+            </StackLayout>
+          </StackLayout>
+
+          <GridLayout columns="*, *" class="actions" rows="auto">
+            <Button col="0" text="✏️ Редактировать" class="btn-primary" @tap="onEdit" />
+            <Button col="1" text="🗑️ Удалить" class="btn-outline" @tap="onDelete" />
+          </GridLayout>
+
+        </StackLayout>
+      </ScrollView>
+
+    </GridLayout>
+
+
 
     <!-- Диалог редактирования бюджета категории -->
-    <EditCategoryBudgetDialog 
+    <EditCategoryBudgetDialog
       v-if="showBudgetDialog"
       :tripId="tripId"
       :category="selectedCategory"
       :currentBudget="selectedCategoryBudget"
-      @close="showBudgetDialog = false"
+      @close="closeBudgetDialog"
       @saved="onBudgetSaved"
     />
   </Page>
@@ -166,6 +159,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, $navigateBack, $navigateTo } from 'nativescript-vue'
+import { useMachine } from '@xstate/vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
@@ -179,6 +173,8 @@ import AddExpenseDialog from './AddExpenseDialog.vue'
 import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
 import ExpenseDetails from './ExpenseDetails.vue'
 import DebtsWidget from '~/components/DebtsWidget.vue'
+import { createScreenLoadMachine, modalMachine } from '~/machines/uiMachines'
+import { GridLayout, Label, StackLayout, confirm } from '@nativescript/core'
 
 const props = defineProps<{
   tripId: number
@@ -191,15 +187,41 @@ const expenseTypeStore = useExpenseTypeStore()
 const budgetCategoryStore = useTripBudgetCategoryStore()
 const userStore = useUserStore()
 
-const trip = ref<Trip | null>(null)
-const showBudgetDialog = ref(false)
+const { snapshot: screenSnapshot, send: sendScreenEvent } = useMachine(createScreenLoadMachine<Trip>())
+const { snapshot: budgetModalSnapshot, send: sendBudgetModalEvent } = useMachine(modalMachine)
+
+const trip = computed(() => screenSnapshot.value.context.data)
+const isScreenLoading = computed(() => screenSnapshot.value.matches('loading'))
+const screenError = computed(() => screenSnapshot.value.context.error)
+const showBudgetDialog = computed(() => budgetModalSnapshot.value.matches('opened'))
 const selectedCategory = ref<ExpenseType | null>(null)
 const selectedCategoryBudget = ref(0)
 const currentUserId = computed(() => userStore.currentUserId)
 
 onMounted(() => {
-  trip.value = tripStore.getTripById(props.tripId)
+  loadTrip()
 })
+
+const loadTrip = async () => {
+  sendScreenEvent({ type: 'START' })
+  try {
+    const loadedTrip = await Promise.resolve(tripStore.getTripById(props.tripId))
+    if (!loadedTrip) {
+      sendScreenEvent({ type: 'REJECT', error: 'Поездка не найдена' })
+      return
+    }
+    sendScreenEvent({ type: 'RESOLVE', data: loadedTrip })
+  } catch (error) {
+    sendScreenEvent({
+      type: 'REJECT',
+      error: error instanceof Error ? error.message : 'Не удалось загрузить поездку'
+    })
+  }
+}
+
+const retryTripLoad = () => {
+  loadTrip()
+}
 
 // Основная информация
 const formattedDates = computed(() => {
@@ -217,6 +239,21 @@ const formattedBudget = computed(() => {
 const participantsCount = computed(() => {
   if (!trip.value) return 0
   return tripMemberStore.getTripMembersByTripId(trip.value.id).length
+})
+
+const particapantsIDs = computed(() => {
+  if (!trip.value) return []
+  return tripMemberStore.getTripMembersByTripId(trip.value.id)
+})
+
+const particapantsAvatar = computed(() => {
+  return particapantsIDs.value.map(participant => {
+    const user = userStore.getUserById(participant.member_id)
+    return {
+      memberId: participant.member_id,
+      avatar: user?.avatar || `https://i.pravatar.cc/150?u=member-${participant.member_id}`
+    }
+  })
 })
 
 // Бюджет
@@ -285,9 +322,10 @@ const getCategoryPercentage = (categoryId: number) => {
 }
 
 const editCategoryBudget = (category: ExpenseType) => {
+  if (!categoryBudgetMap.value[category.id]) return
   selectedCategory.value = category
   selectedCategoryBudget.value = categoryBudgetMap.value[category.id] || 0
-  showBudgetDialog.value = true
+  sendBudgetModalEvent({ type: 'OPEN' })
 }
 
 const showEditBudgetDialog = () => {
@@ -296,14 +334,18 @@ const showEditBudgetDialog = () => {
 }
 
 const onBudgetSaved = () => {
-  showBudgetDialog.value = false
+  sendBudgetModalEvent({ type: 'CLOSE' })
   // Данные обновятся автоматически через computed
 }
 
 // Расходы (последние 5)
+const closeBudgetDialog = () => {
+  sendBudgetModalEvent({ type: 'CLOSE' })
+}
+
 const recentExpenses = computed(() => {
   const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
-  return [...allExpenses].sort((a, b) => 
+  return [...allExpenses].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   ).slice(0, 5)
 })
@@ -313,10 +355,21 @@ const onEdit = () => {
   console.log('Редактировать:', trip.value?.id)
 }
 
-const onDelete = () => {
-  if (trip.value && confirm('Удалить эту поездку?')) {
-    tripStore.deleteTrip(trip.value.id)
-    $navigateBack()
+const onDelete = async () => {
+  if (trip.value) {
+    // Ждем, пока пользователь нажмет "ОК" или "Отмена"
+    const result = await confirm({
+      title: "Удаление поездки",
+      message: "Вы уверены, что хотите удалить эту поездку? Это действие нельзя отменить.",
+      okButtonText: "Удалить",
+      cancelButtonText: "Отмена"
+    });
+
+    // Если пользователь нажал "Удалить" (result === true)
+    if (result) {
+      tripStore.deleteTrip(trip.value.id);
+      $navigateBack();
+    }
   }
 }
 
@@ -341,64 +394,111 @@ const openExpenseDetails = (expenseId: number) => {
 
 <style scoped>
 .p-4 {
-  padding: 16;
+  padding: 0;
 }
 
-/* Блоки */
-.info-block {
-  margin-bottom: 8;
+.hidden {
+  height: 0;
+  visibility: collapse;
 }
 
-/* Заголовки */
-.title {
-  font-size: 24;
-  font-weight: bold;
-  margin-bottom: 8;
+.screen-state {
+  align-items: center;
+  justify-content: center;
+  padding: 40 24;
 }
 
-.subtitle {
-  font-size: 18;
-  color: #6b7280;
-  margin-bottom: 20;
-}
-
-.info-row {
-  margin-bottom: 12;
-  padding: 4 0;
-}
-
-.icon {
-  font-size: 18;
-  margin-right: 12;
-  width: 32;
-}
-
-.description {
+.screen-state-text {
+  margin-top: 12;
   font-size: 16;
-  color: #374151;
-  margin-top: 20;
-  margin-bottom: 8;
-  padding: 12;
-  background-color: #f9fafb;
-  border-radius: 8;
+  color: #6F7071;
 }
 
-/* Разделитель */
-.separator {
-  height: 1;
-  background-color: #e5e7eb;
-  margin: 16 0;
-}
-
-/* Бюджетный виджет */
-.budget-widget {
-  background-color: white;
-  border-radius: 16;
-  padding: 16;
+.screen-state-error {
   margin-bottom: 16;
-  border-width: 1;
-  border-color: #e5e7eb;
+  font-size: 14;
+  color: #ef4444;
+  text-align: center;
 }
+
+
+
+.trip-title {
+  font-family: "Inter";
+  font-size: 20;
+  font-weight: bold;
+  color: #313132;
+}
+
+.trip-title2 {
+  font-family: "Inter";
+  font-size: 36;
+  font-weight: bold;
+  color: #313132;
+}
+
+.trip-title3 {
+  font-family: "Inter";
+  font-size: 20;
+  font-weight: light;
+  color: #6F7071;
+}
+
+.particapantsmain {
+  margin-top: 32;
+  padding-top: 20;
+  padding-left: 24;
+  background-color: white;
+  border-radius: 24;
+  elevation: 8;
+  width: 354;
+  height: 120;
+  shadow-radius: 8; /* iOS */
+  shadow-color: #000000;
+  shadow-opacity: 0.5;
+  shadow-offset-width: 0;
+  shadow-offset-height: 4;
+}
+
+.particapants-image {
+  margin-right: 8;
+  width: 80;
+  height: 80;
+  border-radius: 24;
+}
+
+/* Расходы */
+.expenses-section {
+  margin-top: 32;
+  padding: 24;
+  background-color: white;
+  border-radius: 24;
+  elevation: 8;
+  width: 354;
+  shadow-radius: 8; /* iOS */
+  shadow-color: #000000;
+  shadow-opacity: 0.5;
+  shadow-offset-width: 0;
+  shadow-offset-height: 4;
+}
+
+.categories-budget {
+  margin-top: 32;
+  width: 306;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .budget-header {
   margin-bottom: 16;
@@ -462,12 +562,7 @@ const openExpenseDetails = (expenseId: number) => {
 }
 
 /* Бюджет по категориям */
-.categories-budget {
-  margin-top: 20;
-  padding-top: 16;
-  border-top-width: 1;
-  border-top-color: #e5e7eb;
-}
+
 
 .categories-title {
   font-size: 14;
@@ -520,9 +615,6 @@ const openExpenseDetails = (expenseId: number) => {
 }
 
 /* Расходы */
-.expenses-section {
-  margin-bottom: 16;
-}
 
 .section-header {
   flex-direction: row;
@@ -608,3 +700,5 @@ const openExpenseDetails = (expenseId: number) => {
   font-weight: 500;
 }
 </style>
+
+

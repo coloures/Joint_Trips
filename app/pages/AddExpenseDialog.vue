@@ -76,9 +76,11 @@
           <Label v-if="error" :text="error" class="error" />
           
           <GridLayout columns="*, *" class="dialog-buttons">
-            <Button text="Отмена" class="btn-outline" @tap="close" />
-            <Button text="Добавить" class="btn-primary" @tap="addExpense" />
+            <Button text="Отмена" class="btn-outline" :isEnabled="!isSubmitting" @tap="close" />
+            <Button :text="isSubmitting ? 'Сохранение...' : 'Добавить'" class="btn-primary" :isEnabled="!isSubmitting" @tap="addExpense" />
           </GridLayout>
+
+          <ActivityIndicator v-if="isSubmitting" busy="true" class="submit-loader" />
         </StackLayout>
       </StackLayout>
     </ScrollView>
@@ -87,11 +89,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, $navigateBack } from 'nativescript-vue'
+import { useMachine } from '@xstate/vue'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
 import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
+import { asyncActionMachine } from '~/machines/uiMachines'
 import type { SelectedIndexChangedEventData } from 'nativescript-drop-down'
 
 const props = defineProps<{
@@ -103,6 +107,7 @@ const tripMemberStore = useTripMemberStore()
 const expenseTypeStore = useExpenseTypeStore()
 const userStore = useUserStore()
 const budgetCategoryStore = useTripBudgetCategoryStore()
+const { snapshot: submitSnapshot, send: sendSubmitEvent } = useMachine(asyncActionMachine)
 
 const expenseDescription = ref('')
 const expenseAmount = ref('')
@@ -112,6 +117,7 @@ const expenseDate = ref(new Date().toISOString().split('T')[0])
 const selectedParticipants = ref<Record<number, boolean>>({})
 const error = ref('')
 const categoryBudgetWarning = ref('')
+const isSubmitting = computed(() => submitSnapshot.value.matches('submitting'))
 
 const participants = computed(() => tripMemberStore.getTripMembersByTripId(props.tripId))
 const categories = computed(() => expenseTypeStore.getAllExpenseTypes())
@@ -225,7 +231,9 @@ const toggleParticipant = (userId: number) => {
   selectedParticipants.value[userId] = !selectedParticipants.value[userId]
 }
 
-const addExpense = () => {
+const addExpense = async () => {
+  if (isSubmitting.value) return
+
   if (!expenseDescription.value || !expenseAmount.value || !selectedCategoryId.value || !selectedPayerId.value) {
     error.value = 'Заполните обязательные поля'
     return
@@ -251,29 +259,41 @@ const addExpense = () => {
     error.value = 'Выберите хотя бы одного участника'
     return
   }
-  
-  const newExpense = expenseStore.addExpense({
-    trip_id: props.tripId,
-    description: expenseDescription.value,
-    amount: amount,
-    type_of_expense: selectedCategoryId.value,
-    user_id_pay: selectedPayerId.value,
-    date: expenseDate.value,
-    currency_id: 1
-  })
-  
-  const amountPerPerson = amount / selectedUserIds.length
-  selectedUserIds.forEach(userId => {
-    expenseStore.addExpenseAllocation({
-      expense_id: newExpense,
-      user_id: userId,
-      amount: amountPerPerson
+
+  sendSubmitEvent({ type: 'SUBMIT' })
+  error.value = ''
+
+  try {
+    const newExpense = expenseStore.addExpense({
+      trip_id: props.tripId,
+      description: expenseDescription.value,
+      amount: amount,
+      type_of_expense: selectedCategoryId.value,
+      user_id_pay: selectedPayerId.value,
+      date: expenseDate.value,
+      currency_id: 1
     })
-  })
-  close()
+
+    const amountPerPerson = amount / selectedUserIds.length
+    selectedUserIds.forEach(userId => {
+      expenseStore.addExpenseAllocation({
+        expense_id: newExpense,
+        user_id: userId,
+        amount: amountPerPerson
+      })
+    })
+
+    sendSubmitEvent({ type: 'RESOLVE' })
+    close()
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Не удалось добавить расход'
+    error.value = message
+    sendSubmitEvent({ type: 'REJECT', error: message })
+  }
 }
 
 const close = () => {
+  if (isSubmitting.value) return
   $navigateBack()
 }
 </script>
@@ -374,6 +394,10 @@ const close = () => {
 .dialog-buttons {
   margin-top: 20;
   gap: 12;
+}
+
+.submit-loader {
+  margin-top: 12;
 }
 
 .btn-primary {

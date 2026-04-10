@@ -2,7 +2,7 @@
   {
     "emoji": "🏔️",
     "id": 1,
-    "creator_id": 1,
+    "creator_id": 6,
     "title": "Кавказские горы",
     "country": "Russia",
     "startDate": "2026-07-10",
@@ -26,7 +26,7 @@
   {
     "emoji": "🗼",
     "id": 3,
-    "creator_id": 1,
+    "creator_id": 6,
     "title": "Европейский тур",
     "country": "France",
     "startDate": "2026-09-15",
