@@ -27,7 +27,17 @@
       </GridLayout>
 
       <ScrollView row="1">
-        <StackLayout class="p-4">
+        <StackLayout v-if="isScreenLoading" class="screen-state">
+          <ActivityIndicator busy="true" />
+          <Label text="Загружаем данные поездки..." class="screen-state-text" />
+        </StackLayout>
+
+        <StackLayout v-else-if="screenError" class="screen-state">
+          <Label :text="screenError" class="screen-state-error" textWrap="true" />
+          <Button text="Повторить" class="btn-primary" @tap="retryTripLoad" />
+        </StackLayout>
+
+        <StackLayout v-else class="p-4">
 
           --Наименование и дата
           <StackLayout>
@@ -141,7 +151,7 @@
       :tripId="tripId"
       :category="selectedCategory"
       :currentBudget="selectedCategoryBudget"
-      @close="showBudgetDialog = false"
+      @close="closeBudgetDialog"
       @saved="onBudgetSaved"
     />
   </Page>
@@ -149,6 +159,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, $navigateBack, $navigateTo } from 'nativescript-vue'
+import { useMachine } from '@xstate/vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
@@ -162,6 +173,7 @@ import AddExpenseDialog from './AddExpenseDialog.vue'
 import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
 import ExpenseDetails from './ExpenseDetails.vue'
 import DebtsWidget from '~/components/DebtsWidget.vue'
+import { createScreenLoadMachine, modalMachine } from '~/machines/uiMachines'
 import { GridLayout, Label, StackLayout, confirm } from '@nativescript/core'
 
 const props = defineProps<{
@@ -175,15 +187,41 @@ const expenseTypeStore = useExpenseTypeStore()
 const budgetCategoryStore = useTripBudgetCategoryStore()
 const userStore = useUserStore()
 
-const trip = ref<Trip | null>(null)
-const showBudgetDialog = ref(false)
+const { snapshot: screenSnapshot, send: sendScreenEvent } = useMachine(createScreenLoadMachine<Trip>())
+const { snapshot: budgetModalSnapshot, send: sendBudgetModalEvent } = useMachine(modalMachine)
+
+const trip = computed(() => screenSnapshot.value.context.data)
+const isScreenLoading = computed(() => screenSnapshot.value.matches('loading'))
+const screenError = computed(() => screenSnapshot.value.context.error)
+const showBudgetDialog = computed(() => budgetModalSnapshot.value.matches('opened'))
 const selectedCategory = ref<ExpenseType | null>(null)
 const selectedCategoryBudget = ref(0)
 const currentUserId = computed(() => userStore.currentUserId)
 
 onMounted(() => {
-  trip.value = tripStore.getTripById(props.tripId)
+  loadTrip()
 })
+
+const loadTrip = async () => {
+  sendScreenEvent({ type: 'START' })
+  try {
+    const loadedTrip = await Promise.resolve(tripStore.getTripById(props.tripId))
+    if (!loadedTrip) {
+      sendScreenEvent({ type: 'REJECT', error: 'Поездка не найдена' })
+      return
+    }
+    sendScreenEvent({ type: 'RESOLVE', data: loadedTrip })
+  } catch (error) {
+    sendScreenEvent({
+      type: 'REJECT',
+      error: error instanceof Error ? error.message : 'Не удалось загрузить поездку'
+    })
+  }
+}
+
+const retryTripLoad = () => {
+  loadTrip()
+}
 
 // Основная информация
 const formattedDates = computed(() => {
@@ -284,9 +322,10 @@ const getCategoryPercentage = (categoryId: number) => {
 }
 
 const editCategoryBudget = (category: ExpenseType) => {
+  if (!categoryBudgetMap.value[category.id]) return
   selectedCategory.value = category
   selectedCategoryBudget.value = categoryBudgetMap.value[category.id] || 0
-  showBudgetDialog.value = true
+  sendBudgetModalEvent({ type: 'OPEN' })
 }
 
 const showEditBudgetDialog = () => {
@@ -295,11 +334,15 @@ const showEditBudgetDialog = () => {
 }
 
 const onBudgetSaved = () => {
-  showBudgetDialog.value = false
+  sendBudgetModalEvent({ type: 'CLOSE' })
   // Данные обновятся автоматически через computed
 }
 
 // Расходы (последние 5)
+const closeBudgetDialog = () => {
+  sendBudgetModalEvent({ type: 'CLOSE' })
+}
+
 const recentExpenses = computed(() => {
   const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
   return [...allExpenses].sort((a, b) =>
@@ -357,6 +400,25 @@ const openExpenseDetails = (expenseId: number) => {
 .hidden {
   height: 0;
   visibility: collapse;
+}
+
+.screen-state {
+  align-items: center;
+  justify-content: center;
+  padding: 40 24;
+}
+
+.screen-state-text {
+  margin-top: 12;
+  font-size: 16;
+  color: #6F7071;
+}
+
+.screen-state-error {
+  margin-bottom: 16;
+  font-size: 14;
+  color: #ef4444;
+  text-align: center;
 }
 
 
@@ -638,4 +700,5 @@ const openExpenseDetails = (expenseId: number) => {
   font-weight: 500;
 }
 </style>
+
 
