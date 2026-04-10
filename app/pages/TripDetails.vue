@@ -54,50 +54,21 @@
             </StackLayout>
           </GridLayout>
 
-
-
-          <StackLayout class="budget-widget">
-            <GridLayout columns="*, auto" class="budget-header">
-              <Label text="💰 Бюджет поездки" class="section-title" />
-              <Button text="✎ Редактировать" class="edit-budget-btn" @tap="showEditBudgetDialog" />
-            </GridLayout>
-
-            <GridLayout columns="*, *" class="budget-stats">
-              <StackLayout class="stat-card">
-                <Label text="Общий бюджет" class="stat-label" />
-                <Label :text="`${totalBudget.toLocaleString('ru-RU')} ₽`" class="stat-value" />
-              </StackLayout>
-              <StackLayout class="stat-card">
-                <Label text="Потрачено" class="stat-label" />
-                <Label :text="`${totalExpenses.toLocaleString('ru-RU')} ₽`" class="stat-value" />
-              </StackLayout>
-            </GridLayout>
-
-            <GridLayout columns="*, *" class="budget-stats">
-              <StackLayout class="stat-card">
-                <Label text="Осталось" class="stat-label" />
-                <Label :text="`${remainingBudget.toLocaleString('ru-RU')} ₽`"
-                      :class="remainingBudget >= 0 ? 'stat-value positive' : 'stat-value negative'" />
-              </StackLayout>
-              <StackLayout class="stat-card">
-                <Label text="Использовано" class="stat-label" />
-                <Label :text="`${usagePercentage.toFixed(0)}%`" class="stat-value" />
-              </StackLayout>
-            </GridLayout>
-
-            <Progress :value="usagePercentage" :maxValue="100" class="budget-progress" />
-
-            <!-- Бюджет по категориям -->
+          --Расходы
+          <StackLayout class="expenses-section">
+            <Label text="Расходы" class="trip-title" />
+            <Label text="Общий бюджет на поездку" class="trip-title3" marginTop="8"/>
+            <Label :text="`${totalBudget} ₽`" class="trip-title3" />
+            
             <StackLayout class="categories-budget">
-              <Label text="📊 Расходы по категориям" class="categories-title" />
-
               <StackLayout
                 v-for="category in categoriesWithBudget"
                 :key="category.id"
                 class="category-budget-item"
-                @tap="editCategoryBudget(category)"
               >
+
                 <GridLayout columns="auto, *, auto">
+
                   <Label :text="getCategoryEmoji(category.name)" col="0" class="category-emoji" />
                   <Label :text="category.name" col="1" class="category-name" />
                   <Label
@@ -106,7 +77,10 @@
                     class="category-amount"
                     :class="{ 'no-budget': !categoryBudgetMap[category.id] }"
                   />
+
                 </GridLayout>
+
+
                 <Progress
                   v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
                   :value="getCategoryPercentage(category.id)"
@@ -121,6 +95,10 @@
               </StackLayout>
             </StackLayout>
           </StackLayout>
+
+
+
+
 
           <StackLayout class="expenses-section">
             <StackLayout class="section-header">
@@ -376,22 +354,29 @@ const openExpenseDetails = (expenseId: number) => {
   padding: 0;
 }
 
+.hidden {
+  height: 0;
+  visibility: collapse;
+}
+
+
+
 .trip-title {
-  font-family: "Inter", "Inter-Regular", "Inter-Bold";
+  font-family: "Inter";
   font-size: 20;
   font-weight: bold;
   color: #313132;
 }
 
 .trip-title2 {
-  font-family: "Inter", "Inter-Regular", "Inter-Bold";
+  font-family: "Inter";
   font-size: 36;
   font-weight: bold;
   color: #313132;
 }
 
 .trip-title3 {
-  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
+  font-family: "Inter";
   font-size: 20;
   font-weight: light;
   color: #6F7071;
@@ -413,39 +398,6 @@ const openExpenseDetails = (expenseId: number) => {
   shadow-offset-height: 4;
 }
 
-.bigtext{
-  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
-  font-size: 20;
-  font-weight: bold;
-  color: 313132;
-}
-
-.hidden {
-  height: 0;
-  visibility: collapse;
-}
-
-.page-container {
-  background-color: #ffffff;
-}
-
-/* Кастомный хедер 30dp высотой */
-.custom-header {
-  background-color: transparent;
-  padding-left: 24;
-  padding-right: 24;
-  margin-top: 24; /* Отступ сверху 24dp (24px в дизайне) */
-}
-
-/* Кнопка 30x30 */
-.icon-button {
-  background-color: transparent;
-  border-width: 0;
-  padding: 0;
-  margin: 0;
-  border-radius: 0;
-}
-
 .particapants-image {
   margin-right: 8;
   width: 80;
@@ -453,69 +405,38 @@ const openExpenseDetails = (expenseId: number) => {
   border-radius: 24;
 }
 
-/* SVG изображение внутри кнопки */
-.icon-image {
-  width: 20;
-  height: 20;
-}
-
-
-
-/* Блоки */
-.info-block {
-  margin-bottom: 8;
-}
-
-/* Заголовки */
-.title {
-  font-size: 24;
-  font-weight: bold;
-  margin-bottom: 8;
-}
-
-.subtitle {
-  font-size: 18;
-  color: #6b7280;
-  margin-bottom: 20;
-}
-
-.info-row {
-  margin-bottom: 12;
-  padding: 4 0;
-}
-
-.icon {
-  font-size: 18;
-  margin-right: 12;
-  width: 32;
-}
-
-.description {
-  font-size: 16;
-  color: #374151;
-  margin-top: 20;
-  margin-bottom: 8;
-  padding: 12;
-  background-color: #f9fafb;
-  border-radius: 8;
-}
-
-/* Разделитель */
-.separator {
-  height: 1;
-  background-color: #e5e7eb;
-  margin: 16 0;
-}
-
-/* Бюджетный виджет */
-.budget-widget {
+/* Расходы */
+.expenses-section {
+  margin-top: 32;
+  padding: 24;
   background-color: white;
-  border-radius: 16;
-  padding: 16;
-  margin-bottom: 16;
-  border-width: 1;
-  border-color: #e5e7eb;
+  border-radius: 24;
+  elevation: 8;
+  width: 354;
+  shadow-radius: 8; /* iOS */
+  shadow-color: #000000;
+  shadow-opacity: 0.5;
+  shadow-offset-width: 0;
+  shadow-offset-height: 4;
 }
+
+.categories-budget {
+  margin-top: 32;
+  width: 306;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .budget-header {
   margin-bottom: 16;
@@ -579,12 +500,7 @@ const openExpenseDetails = (expenseId: number) => {
 }
 
 /* Бюджет по категориям */
-.categories-budget {
-  margin-top: 20;
-  padding-top: 16;
-  border-top-width: 1;
-  border-top-color: #e5e7eb;
-}
+
 
 .categories-title {
   font-size: 14;
@@ -637,9 +553,6 @@ const openExpenseDetails = (expenseId: number) => {
 }
 
 /* Расходы */
-.expenses-section {
-  margin-bottom: 16;
-}
 
 .section-header {
   flex-direction: row;
