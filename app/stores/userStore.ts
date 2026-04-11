@@ -1,17 +1,30 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'nativescript-vue';
 import type { User } from '~/models/user';
-
-import Users from '../seeders/users.json';
+import type { UserCreatePayload, UserUpdatePayload } from '~/services/userApi';
+import { fetchUsers, loginUser, createUser as createUserApi, updateUser as updateUserApi } from '~/services/userApi';
 
 export const useUserStore = defineStore('user', () => {
   const users = ref<User[]>([]);
   const currentUserId = ref<number | null>(null);
+  const isSyncingUsers = ref(false);
 
-  // Инициализация из сидов (в будущем будет из API)
+  async function loadUsers() {
+    if (isSyncingUsers.value) return;
+    isSyncingUsers.value = true;
+    try {
+      const list = await fetchUsers();
+      users.value = list;
+      console.log(`[UserStore] Загружено ${users.value.length} пользователей с API`);
+    } catch (error) {
+      console.warn('[UserStore] не удалось загрузить пользователей', error);
+    } finally {
+      isSyncingUsers.value = false;
+    }
+  }
+
   function init() {
-    users.value = JSON.parse(JSON.stringify(Users));
-    console.log(`[UserStore] Загружено ${users.value.length} пользователей из тестовых данных`);
+    void loadUsers();
   }
   init();
 
@@ -41,31 +54,20 @@ export const useUserStore = defineStore('user', () => {
     currentUserId.value = userId;
   };
 
-  const loginWithCredentials = (payload: {
+  const loginWithCredentials = async (payload: {
     first_name: string;
     last_name: string;
     phone_number: string;
   }) => {
-    const normalized = {
-      first_name: payload.first_name.trim().toLowerCase(),
-      last_name: payload.last_name.trim().toLowerCase(),
-      phone_number: payload.phone_number.replace(/\s+/g, '')
-    };
-
-    const matchedUser = users.value.find(user => {
-      return (
-        user.first_name.trim().toLowerCase() === normalized.first_name &&
-        user.last_name.trim().toLowerCase() === normalized.last_name &&
-        user.phone_number.replace(/\s+/g, '') === normalized.phone_number
-      );
-    });
-
-    if (matchedUser) {
-      currentUserId.value = matchedUser.id;
-      return matchedUser;
+    const firstName = payload.first_name.trim();
+    const lastName = payload.last_name.trim();
+    const phoneNumber = payload.phone_number.replace(/\s+/g, '');
+    const user = await loginUser(phoneNumber, firstName, lastName);
+    currentUserId.value = user.id;
+    if (!users.value.some(existing => existing.id === user.id)) {
+      users.value.push(user);
     }
-
-    throw new Error('Пользователь не найден');
+    return user;
   };
 
   const logout = () => {
@@ -73,19 +75,24 @@ export const useUserStore = defineStore('user', () => {
   };
 
   // Методы для управления данными (в будущем)
-  function addUser(user: Omit<User, 'id'>) {
-    const newUser: User = {
-      ...user,
-      id: Math.max(0, ...users.value.map(u => u.id)) + 1
-    };
-    users.value.push(newUser);
+  async function addUser(user: UserCreatePayload) {
+    const created = await createUserApi(user);
+    users.value.push(created);
+    return created;
   }
 
-  function updateUser(id: number, updates: Partial<User>) {
+  async function updateUser(id: number, updates: UserUpdatePayload) {
+    const updated = await updateUserApi(id, updates);
     const index = users.value.findIndex(u => u.id === id);
     if (index !== -1) {
-      users.value[index] = { ...users.value[index], ...updates };
+      users.value[index] = updated;
+    } else {
+      users.value.push(updated);
     }
+    if (currentUserId.value === id) {
+      currentUserId.value = updated?.id ?? currentUserId.value;
+    }
+    return updated;
   }
 
   // Возвращаем публичный API

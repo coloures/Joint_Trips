@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { computed, $navigateTo } from 'nativescript-vue'
+import { computed, $navigateTo, onMounted } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
@@ -42,6 +42,10 @@ const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
 const notificationStore = useNotificationStore()
 const userStore = useUserStore()
+
+onMounted(() => {
+  void tripStore.loadTrips()
+})
 
 const memberId = computed(() => userStore.currentUserId)
 

@@ -440,7 +440,7 @@ const openExpenseDetails = (expenseId: number) => {
 .trip-title3 {
   font-family: "Inter";
   font-size: 20;
-  font-weight: light;
+  font-weight: 300;
   color: #6F7071;
 }
 

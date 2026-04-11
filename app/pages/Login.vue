@@ -55,7 +55,7 @@ const lastName = ref('')
 const phoneNumber = ref('')
 const error = ref('')
 
-const attemptLogin = () => {
+const attemptLogin = async () => {
   error.value = ''
   if (!firstName.value.trim() || !lastName.value.trim() || !phoneNumber.value.trim()) {
     error.value = 'Заполните имя, фамилию и номер телефона'
@@ -63,7 +63,7 @@ const attemptLogin = () => {
   }
 
   try {
-    userStore.loginWithCredentials({
+    await userStore.loginWithCredentials({
       first_name: firstName.value,
       last_name: lastName.value,
       phone_number: phoneNumber.value
