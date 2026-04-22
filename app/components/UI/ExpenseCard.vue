@@ -10,8 +10,8 @@
     </StackLayout>
     
     <StackLayout col="2" class="expense-amount-wrapper">
-      <Label :text="`${expense.amount.toLocaleString('ru-RU')} ₽`" class="expense-amount" />
-      <Label v-if="myShare" :text="`Ваша доля: ${myShare.toLocaleString('ru-RU')} ₽`" class="my-share" />
+      <Label :text="`${expense.amount.toLocaleString('ru-RU')} ${currencySymbol}`" class="expense-amount" />
+      <Label v-if="myShare" :text="`Ваша доля: ${myShare.toLocaleString('ru-RU')} ${currencySymbol}`" class="my-share" />
     </StackLayout>
   </GridLayout>
 </template>
@@ -22,6 +22,7 @@ import type { Expense } from '~/models/expense';
 import { useExpenseStore } from '~/stores/expenseStore';
 import { useUserStore } from '~/stores/userStore';
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore';
+import { useCurrencyStore } from '~/stores/currencyStore';
 
 const props = defineProps<{
   expense: Expense;
@@ -33,6 +34,7 @@ const emit = defineEmits(['tap']);
 const expenseStore = useExpenseStore();
 const userStore = useUserStore();
 const expenseTypeStore = useExpenseTypeStore();
+const currencyStore = useCurrencyStore();
 
 const getUserName = (userId: number) => {
   const user = userStore.getUserById(userId);
@@ -67,6 +69,11 @@ const myShare = computed(() => {
   const allocations = expenseStore.getAllocationsByExpenseId(props.expense.id);
   const myAllocation = allocations.find(a => a.user_id === props.currentUserId);
   return myAllocation?.amount || 0;
+});
+
+const currencySymbol = computed(() => {
+  const currencyId = props.expense.currency_id;
+  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽';
 });
 
 const onTap = () => {

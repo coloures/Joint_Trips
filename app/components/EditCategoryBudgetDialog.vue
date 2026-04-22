@@ -11,7 +11,7 @@
           class="input"
         />
         
-        <Label text="₽" class="currency-hint" />
+        <Label :text="currencySymbol" class="currency-hint" />
         
         <Label v-if="error" :text="error" class="error" />
         
@@ -27,6 +27,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'nativescript-vue'
 import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
+import { useTripStore } from '~/stores/tripStore'
+import { useCurrencyStore } from '~/stores/currencyStore'
 import type { ExpenseType } from '~/models/type_of_expense'
 
 const props = defineProps<{
@@ -38,6 +40,8 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'saved'])
 
 const budgetCategoryStore = useTripBudgetCategoryStore()
+const tripStore = useTripStore()
+const currencyStore = useCurrencyStore()
 const budgetAmount = ref(String(props.currentBudget || ''))
 const error = ref('')
 
@@ -46,6 +50,14 @@ const dialogTitle = computed(() => {
   if (!props.category) return 'Редактировать бюджет'
   const emoji = getCategoryEmoji(props.category.name)
   return `${emoji} ${props.category.name}`
+})
+
+const trip = computed(() => tripStore.getTripById(props.tripId))
+
+const currencySymbol = computed(() => {
+  const currencyId = trip.value?.currency_id
+  if (!currencyId) return '₽'
+  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
 })
 
 const getCategoryEmoji = (categoryName: string): string => {

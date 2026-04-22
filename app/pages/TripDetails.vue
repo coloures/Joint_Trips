@@ -68,7 +68,7 @@
           <StackLayout class="expenses-section">
             <Label text="Расходы" class="trip-title" />
             <Label text="Общий бюджет на поездку" class="trip-title3" marginTop="8"/>
-            <Label :text="`${totalBudget} ₽`" class="trip-title3" />
+            <Label :text="`${totalBudget} ${currencySymbol}`" class="trip-title3" />
             
             <StackLayout class="categories-budget">
               <StackLayout
@@ -82,7 +82,7 @@
                   <Label :text="getCategoryEmoji(category.name)" col="0" class="category-emoji" />
                   <Label :text="category.name" col="1" class="category-name" />
                   <Label
-                    :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ₽` : 'Не указан'"
+                    :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ${currencySymbol}` : 'Не указан'"
                     col="2"
                     class="category-amount"
                     :class="{ 'no-budget': !categoryBudgetMap[category.id] }"
@@ -99,7 +99,7 @@
                 />
                 <Label
                   v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
-                  :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ₽`"
+                  :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ${currencySymbol}`"
                   class="category-spent"
                 />
               </StackLayout>
@@ -166,6 +166,7 @@ import { useExpenseStore } from '~/stores/expenseStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
 import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
+import { useCurrencyStore } from '~/stores/currencyStore'
 import type { Trip } from '~/models/trip'
 import type { ExpenseType } from '~/models/type_of_expense'
 import ExpenseCard from '~/components/UI/ExpenseCard.vue'
@@ -186,6 +187,7 @@ const expenseStore = useExpenseStore()
 const expenseTypeStore = useExpenseTypeStore()
 const budgetCategoryStore = useTripBudgetCategoryStore()
 const userStore = useUserStore()
+const currencyStore = useCurrencyStore()
 
 const { snapshot: screenSnapshot, send: sendScreenEvent } = useMachine(createScreenLoadMachine<Trip>())
 const { snapshot: budgetModalSnapshot, send: sendBudgetModalEvent } = useMachine(modalMachine)
@@ -233,7 +235,13 @@ const formattedDates = computed(() => {
 
 const formattedBudget = computed(() => {
   if (!trip.value) return ''
-  return `${trip.value.budget.toLocaleString('ru-RU')} ₽`
+  return `${trip.value.budget.toLocaleString('ru-RU')} ${currencySymbol.value}`
+})
+
+const currencySymbol = computed(() => {
+  const currencyId = trip.value?.currency_id
+  if (!currencyId) return '₽'
+  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
 })
 
 const participantsCount = computed(() => {

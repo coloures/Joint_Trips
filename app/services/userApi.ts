@@ -9,6 +9,8 @@ export interface UserDto {
   avatar?: string
 }
 
+export type AvatarDto = string | null
+
 export interface UserCreatePayload {
   firstName: string
   lastName: string
@@ -108,4 +110,20 @@ export const lookupUser = (phoneNumber: string) =>
 export const fetchCurrentUser = (userId?: number) =>
   request<UserDto>(`/users/current${buildQueryString({ user_id: userId })}`).then(normalizeUser)
 
+export const getAvatarUser = (userId: number) =>
+  request<AvatarDto>(`/users/avatar${buildQueryString({ user_id: userId })}`)
+
+// Uploads an image for the user and then returns the updated avatar URL.
+export const postAvatarUser = async (userId: number, file: Blob, filename = 'avatar.jpg') => {
+  const form = new FormData()
+  // FormData typing is DOM-centric; NativeScript fetch supports Blob/FormData at runtime.
+  ;(form as any).append('file', file, filename)
+
+  await request<unknown>(`/avatars/upload/${userId}`, {
+    method: 'POST',
+    body: form
+  })
+
+  return getAvatarUser(userId)
+}
 

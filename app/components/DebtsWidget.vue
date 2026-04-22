@@ -3,7 +3,7 @@
     <!-- Красная плашка "Я должен" -->
     <StackLayout class="debt-header" v-if="totalMyDebt > 0">
       <Label 
-        :text="`Я должен: ${totalMyDebt.toLocaleString('ru-RU')} ₽`"
+        :text="`Я должен: ${totalMyDebt.toLocaleString('ru-RU')} ${currencySymbol}`"
         class="header-text"
       />
     </StackLayout>
@@ -27,7 +27,7 @@
           <!-- Сумма ПО ЦЕНТРУ -->
           <Label 
             col="1"
-            :text="`${debt.amount.toLocaleString('ru-RU')} ₽`"
+            :text="`${debt.amount.toLocaleString('ru-RU')} ${currencySymbol}`"
             class="debt-amount"
           />
 
@@ -60,16 +60,28 @@
 <script setup lang="ts">
 import { computed } from 'nativescript-vue'
 import { useExpenseStore } from '~/stores/expenseStore'
+import { useTripStore } from '~/stores/tripStore'
 import { useUserStore } from '~/stores/userStore'
+import { useCurrencyStore } from '~/stores/currencyStore'
 
 const props = defineProps<{
   tripId: number
 }>()
 
 const expenseStore = useExpenseStore()
+const tripStore = useTripStore()
 const userStore = useUserStore()
+const currencyStore = useCurrencyStore()
 
 const debts = computed(() => expenseStore.calculateDebts(props.tripId))
+
+const trip = computed(() => tripStore.getTripById(props.tripId))
+
+const currencySymbol = computed(() => {
+  const currencyId = trip.value?.currency_id
+  if (!currencyId) return '₽'
+  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
+})
 
 const currentUserId = computed(() => userStore.currentUserId)
 

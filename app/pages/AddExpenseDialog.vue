@@ -95,6 +95,8 @@ import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
 import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
+import { useTripStore } from '~/stores/tripStore'
+import { useCurrencyStore } from '~/stores/currencyStore'
 import { asyncActionMachine } from '~/machines/uiMachines'
 import type { SelectedIndexChangedEventData } from 'nativescript-drop-down'
 
@@ -103,10 +105,12 @@ const props = defineProps<{
 }>()
 
 const expenseStore = useExpenseStore()
+const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 const expenseTypeStore = useExpenseTypeStore()
 const userStore = useUserStore()
 const budgetCategoryStore = useTripBudgetCategoryStore()
+const currencyStore = useCurrencyStore()
 const { snapshot: submitSnapshot, send: sendSubmitEvent } = useMachine(asyncActionMachine)
 
 const expenseDescription = ref('')
@@ -121,6 +125,13 @@ const isSubmitting = computed(() => submitSnapshot.value.matches('submitting'))
 
 const participants = computed(() => tripMemberStore.getTripMembersByTripId(props.tripId))
 const categories = computed(() => expenseTypeStore.getAllExpenseTypes())
+const trip = computed(() => tripStore.getTripById(props.tripId))
+
+const currencySymbol = computed(() => {
+  const currencyId = trip.value?.currency_id
+  if (!currencyId) return '₽'
+  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
+})
 
 watch(
   categories,
@@ -184,7 +195,7 @@ const checkCategoryLimit = (categoryId: number, amount: number): { allowed: bool
     return { 
       allowed: false, 
       remaining, 
-      message: `Превышение бюджета категории! Остаток: ${remaining.toLocaleString('ru-RU')} ₽` 
+      message: `Превышение бюджета категории! Остаток: ${remaining.toLocaleString('ru-RU')} ${currencySymbol.value}` 
     }
   }
   
@@ -207,7 +218,7 @@ watch([expenseAmount, selectedCategoryId], ([amount, categoryId]) => {
   if (!check.allowed) {
     categoryBudgetWarning.value = check.message
   } else if (check.remaining !== Infinity && check.remaining < 10000) {
-    categoryBudgetWarning.value = `⚠️ Остаток бюджета: ${check.remaining.toLocaleString('ru-RU')} ₽`
+    categoryBudgetWarning.value = `⚠️ Остаток бюджета: ${check.remaining.toLocaleString('ru-RU')} ${currencySymbol.value}`
   } else {
     categoryBudgetWarning.value = ''
   }
@@ -271,7 +282,7 @@ const addExpense = async () => {
       type_of_expense: selectedCategoryId.value,
       user_id_pay: selectedPayerId.value,
       date: expenseDate.value,
-      currency_id: 1
+      currency_id: trip.value?.currency_id ?? 1
     })
 
     const amountPerPerson = amount / selectedUserIds.length

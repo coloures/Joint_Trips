@@ -3,7 +3,7 @@
     <ScrollView>
       <StackLayout class="w-full p-4">
         <GridLayout columns="*, *" class="w-full mb-4">
-          <CardDebt col="0" :amount="debtAmount" class="mr-2" @tap="onCardDept"/>
+          <CardDebt col="0" :amount="debtAmount" :currencySymbol="defaultCurrencySymbol" class="mr-2" @tap="onCardDept"/>
           <CardNotification col="1" :count="notificationCount" class="ml-2" @tap="onCardNotification"/>
         </GridLayout>
 
@@ -30,6 +30,7 @@ import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useNotificationStore } from '~/stores/notificationStore'
 import { useUserStore } from '~/stores/userStore'
+import { useCurrencyStore } from '~/stores/currencyStore'
 import CardTrip from '../components/UI/CardTrip.vue'
 import CardDebt from '../components/UI/CardDebt.vue'
 import CardNotification from '~/components/UI/CardNotification.vue'
@@ -42,6 +43,7 @@ const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
 const notificationStore = useNotificationStore()
 const userStore = useUserStore()
+const currencyStore = useCurrencyStore()
 
 onMounted(() => {
   void tripStore.loadTrips()
@@ -70,6 +72,10 @@ const debtAmount = computed(() => {
   });
 
   return totalDebt;
+})
+
+const defaultCurrencySymbol = computed(() => {
+  return currencyStore.currencies.find(c => c.id === 1)?.symbol || '₽'
 })
 
 const items = computed(() => {

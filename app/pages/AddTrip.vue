@@ -68,9 +68,20 @@
           <Label text="Формат: ГГГГ-ММ-ДД" class="hint" />
         </StackLayout>
 
+        <!-- 🔹 Валюта -->
+        <StackLayout class="form-group">
+          <Label text="Валюта" class="label" />
+          <DropDown
+            :items="currencyItems"
+            :selectedIndex="selectedCurrencyIndex"
+            @selectedIndexChanged="onCurrencyChange"
+            class="input"
+          />
+        </StackLayout>
+
         <!-- 🔹 Бюджет -->
         <StackLayout class="form-group">
-          <Label text="Бюджет (₽)" class="label" />
+          <Label :text="`Бюджет (${currencySymbol})`" class="label" />
           <TextField 
             v-model="formData.budget"
             hint="100000" 
@@ -98,13 +109,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, $navigateBack } from 'nativescript-vue'
+import { ref, computed, $navigateBack, watch } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
+import { useCurrencyStore } from '~/stores/currencyStore'
+import { useUserStore } from '~/stores/userStore'
 import * as dialogs from '@nativescript/core/ui/dialogs'
+import type { SelectedIndexChangedEventData } from 'nativescript-drop-down'
 
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
+const currencyStore = useCurrencyStore()
+const userStore = useUserStore()
+
+const selectedCurrencyId = ref<number | null>(null)
+
+watch(
+  () => currencyStore.currencies,
+  (list) => {
+    if (!selectedCurrencyId.value && list.length) {
+      selectedCurrencyId.value = list[0].id
+    }
+  },
+  { immediate: true }
+)
+
+const currencyItems = computed(() => currencyStore.currencies.map(c => `${c.code} (${c.symbol})`))
+
+const selectedCurrencyIndex = computed(() => {
+  if (!selectedCurrencyId.value) return 0
+  const index = currencyStore.currencies.findIndex(c => c.id === selectedCurrencyId.value)
+  return index >= 0 ? index : 0
+})
+
+const onCurrencyChange = (args: SelectedIndexChangedEventData) => {
+  const currency = currencyStore.currencies[args.newIndex]
+  if (currency) selectedCurrencyId.value = currency.id
+}
+
+const currencySymbol = computed(() => {
+  const currencyId = selectedCurrencyId.value
+  if (!currencyId) return '₽'
+  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
+})
 
 // Форма
 const formData = ref({
@@ -192,23 +239,23 @@ const onSubmit = async () => {
   try {
     console.log('Сохраняем поездку:', formData.value)
     
-    // 1. Создаём поездку
-    const newTrip = {
+    const creatorId = userStore.currentUserId ?? 1
+    const currencyId = selectedCurrencyId.value ?? currencyStore.currencies[0]?.id ?? 1
+
+    // 1. Создаём поездку в API
+    const newTrip = await tripStore.createTrip({
       emoji: formData.value.emoji,
-      creator_id: 2, // TODO: взять из auth
+      creatorId,
       title: formData.value.title,
       country: formData.value.country,
       startDate: formData.value.startDate,
       endDate: formData.value.endDate,
-      currency_id: 1,
-      budget: formData.value.budget,
+      currencyId,
+      budget: Number(formData.value.budget) || 0,
       description: ''
-    }
-    
-    tripStore.addTrip(newTrip)
-    
-    const trips = tripStore.getAllTrips()
-    const tripId = trips[trips.length - 1]?.id
+    })
+
+    const tripId = newTrip.id
     
     if (!tripId) {
       throw new Error('Не удалось создать поездку')
@@ -217,7 +264,7 @@ const onSubmit = async () => {
     // 2. Добавляем создателя как участника
     tripMemberStore.addTripMember({
       trip_id: tripId,
-      member_id: 2,
+      member_id: creatorId,
       status: 'confirmed',
       role: 'creator'
     })

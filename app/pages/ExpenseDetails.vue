@@ -24,7 +24,7 @@
 
           <GridLayout columns="auto, *" class="info-row">
             <Label text="💰" col="0" class="icon-large" />
-            <Label :text="`${expense?.amount.toLocaleString('ru-RU')} ₽`" col="1" class="amount-text" />
+            <Label :text="`${expense?.amount.toLocaleString('ru-RU')} ${currencySymbol}`" col="1" class="amount-text" />
           </GridLayout>
 
           <GridLayout columns="auto, *" class="info-row">
@@ -59,7 +59,7 @@
             <GridLayout columns="auto, *, auto">
               <Label :text="getUserEmoji(allocation.user_id)" col="0" class="user-emoji" />
               <Label :text="getUserName(allocation.user_id)" col="1" class="user-name" />
-              <Label :text="`${allocation.amount.toLocaleString('ru-RU')} ₽`" col="2" class="allocation-amount" />
+              <Label :text="`${allocation.amount.toLocaleString('ru-RU')} ${currencySymbol}`" col="2" class="allocation-amount" />
             </GridLayout>
           </StackLayout>
         </StackLayout>
@@ -93,6 +93,7 @@ import { ref, computed, onMounted, $navigateBack } from 'nativescript-vue'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useUserStore } from '~/stores/userStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
+import { useCurrencyStore } from '~/stores/currencyStore'
 import type { Expense } from '~/models/expense'
 import EditExpenseDialog from '~/components/EditExpenseDialog.vue'
 
@@ -104,6 +105,7 @@ const props = defineProps<{
 const expenseStore = useExpenseStore()
 const userStore = useUserStore()
 const expenseTypeStore = useExpenseTypeStore()
+const currencyStore = useCurrencyStore()
 
 const expense = ref<Expense | null>(null)
 const showEditDialog = ref(false)
@@ -116,6 +118,12 @@ onMounted(() => {
 const allocations = computed(() => {
   if (!expense.value) return []
   return expenseStore.getAllocationsByExpenseId(expense.value.id)
+})
+
+const currencySymbol = computed(() => {
+  const currencyId = expense.value?.currency_id
+  if (!currencyId) return '₽'
+  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
 })
 
 const categoryName = computed(() => {
