@@ -1,58 +1,76 @@
-import { defineStore } from 'pinia';
-import { ref } from 'nativescript-vue';
-import type { ExpenseType } from '~/models/type_of_expense';
-import ExpenseTypes from '../seeders/expense_types.json';
+import { defineStore } from 'pinia'
+import { ref } from 'nativescript-vue'
+import type { ExpenseType } from '~/models/type_of_expense'
+import ExpenseTypes from '../seeders/expense_types.json'
+import {
+  fetchExpenseTypes,
+  createExpenseType as createExpenseTypeApi,
+  updateExpenseType as updateExpenseTypeApi,
+  deleteExpenseType as deleteExpenseTypeApi
+} from '~/services/expenseTypeApi'
 
 export const useExpenseTypeStore = defineStore('expenseType', () => {
-  // Состояние
-  const expenseTypes = ref<ExpenseType[]>([]);
+  const expenseTypes = ref<ExpenseType[]>([])
+  const isSyncing = ref(false)
+  const syncError = ref<string | null>(null)
 
-  // Инициализация из сидов
-  function init() {
-    expenseTypes.value = JSON.parse(JSON.stringify(ExpenseTypes));
-    console.log(`[ExpenseTypeStore] Загружено ${expenseTypes.value.length} категорий расходов`);
-  }
-  init();
-
-  // Геттеры
-  const getAllExpenseTypes = () => expenseTypes.value;
-
-  const getExpenseTypeById = (id: number): ExpenseType | null => {
-    return expenseTypes.value.find(et => et.id === id) || null;
-  };
-
-  const getExpenseTypeByName = (name: string): ExpenseType | null => {
-    return expenseTypes.value.find(et => et.name.toLowerCase() === name.toLowerCase()) || null;
-  };
-
-  // Методы для изменения данных
-  function addExpenseType(expenseType: Omit<ExpenseType, 'id'>) {
-    const newExpenseType: ExpenseType = {
-      ...expenseType,
-      id: Math.max(0, ...expenseTypes.value.map(et => et.id)) + 1
-    };
-    expenseTypes.value.push(newExpenseType);
-  }
-
-  function updateExpenseType(id: number, updates: Partial<ExpenseType>) {
-    const index = expenseTypes.value.findIndex(et => et.id === id);
-    if (index !== -1) {
-      expenseTypes.value[index] = { ...expenseTypes.value[index], ...updates };
+  async function loadExpenseTypes() {
+    if (isSyncing.value) return
+    isSyncing.value = true
+    syncError.value = null
+    try {
+      expenseTypes.value = await fetchExpenseTypes()
+    } catch (error) {
+      syncError.value = error instanceof Error ? error.message : 'Failed to load expense types'
+      console.warn('[ExpenseTypeStore] Failed to load from API', error)
+    } finally {
+      isSyncing.value = false
     }
   }
 
-  function deleteExpenseType(id: number) {
-    expenseTypes.value = expenseTypes.value.filter(et => et.id !== id);
+  function init() {
+    expenseTypes.value = JSON.parse(JSON.stringify(ExpenseTypes))
+  }
+  init()
+
+  const getAllExpenseTypes = () => expenseTypes.value
+
+  const getExpenseTypeById = (id: number): ExpenseType | null => {
+    return expenseTypes.value.find(et => et.id === id) || null
   }
 
-  // Возвращаем публичный API
+  const getExpenseTypeByName = (name: string): ExpenseType | null => {
+    return expenseTypes.value.find(et => et.name.toLowerCase() === name.toLowerCase()) || null
+  }
+
+  async function addExpenseType(expenseType: Omit<ExpenseType, 'id'>) {
+    const created = await createExpenseTypeApi(expenseType)
+    expenseTypes.value.push(created)
+    return created
+  }
+
+  async function updateExpenseType(id: number, updates: Partial<ExpenseType>) {
+    const updated = await updateExpenseTypeApi(id, updates)
+    const index = expenseTypes.value.findIndex(et => et.id === id)
+    if (index !== -1) expenseTypes.value[index] = updated
+    return updated
+  }
+
+  async function deleteExpenseType(id: number) {
+    await deleteExpenseTypeApi(id)
+    expenseTypes.value = expenseTypes.value.filter(et => et.id !== id)
+  }
+
   return {
     expenseTypes,
+    isSyncing,
+    syncError,
+    loadExpenseTypes,
     getAllExpenseTypes,
     getExpenseTypeById,
     getExpenseTypeByName,
     addExpenseType,
     updateExpenseType,
     deleteExpenseType
-  };
-});
+  }
+})

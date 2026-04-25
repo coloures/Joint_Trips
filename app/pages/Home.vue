@@ -3,21 +3,27 @@
     <ScrollView>
       <StackLayout class="w-full p-4">
         <GridLayout columns="*, *" class="w-full mb-4">
-          <CardDebt col="0" :amount="debtAmount" :currencySymbol="defaultCurrencySymbol" class="mr-2" @tap="onCardDept"/>
-          <CardNotification col="1" :count="notificationCount" class="ml-2" @tap="onCardNotification"/>
+          <CardDebt
+            col="0"
+            :amount="debtAmount"
+            :currencySymbol="defaultCurrencySymbol"
+            class="mr-2"
+            @tap="onCardDept"
+          />
+          <CardNotification col="1" :count="notificationCount" class="ml-2" @tap="onCardNotification" />
         </GridLayout>
 
-        <CardTrip 
-          v-for="item in items" 
-          :key="item.id" 
-          :icon="item.emoji" 
-          :title="item.title" 
-          :participants="getParticipantsCount(item.id)" 
-          :startDate="item.startDate" 
-          :endDate="item.endDate" 
+        <CardTrip
+          v-for="item in items"
+          :key="item.id"
+          :icon="item.emoji"
+          :title="item.title"
+          :participants="getParticipantsCount(item.id)"
+          :startDate="item.startDate"
+          :endDate="item.endDate"
           @tap="() => onCardTrip(item)"
         />
-        <CardAddingTrip @addNewTrip="() => onCardAddingTrip()"/>
+        <CardAddingTrip @addNewTrip="() => onCardAddingTrip()" />
       </StackLayout>
     </ScrollView>
   </Page>
@@ -45,11 +51,11 @@ const notificationStore = useNotificationStore()
 const userStore = useUserStore()
 const currencyStore = useCurrencyStore()
 
-onMounted(() => {
-  void tripStore.loadTrips()
-})
-
 const memberId = computed(() => userStore.currentUserId)
+
+onMounted(() => {
+  // Data bootstrap happens in `app/App.vue` after login.
+})
 
 const notificationCount = computed(() => {
   if (!memberId.value) return 0
@@ -58,20 +64,17 @@ const notificationCount = computed(() => {
 
 const debtAmount = computed(() => {
   if (!memberId.value) return 0
-  if (!memberId.value) return 0
   const memberTrips = tripMemberStore.getTripMembersByMemberId(memberId.value)
-  let totalDebt = 0;
+  let totalDebt = 0
 
   memberTrips.forEach(memberTrip => {
-    const debts = expenseStore.calculateDebts(memberTrip.trip_id);
+    const debts = expenseStore.calculateDebts(memberTrip.trip_id)
     debts.forEach(debt => {
-      if (debt.fromUserId === memberId.value) {
-        totalDebt += debt.amount;
-      }
-    });
-  });
+      if (debt.fromUserId === memberId.value) totalDebt += debt.amount
+    })
+  })
 
-  return totalDebt;
+  return totalDebt
 })
 
 const defaultCurrencySymbol = computed(() => {
@@ -79,16 +82,25 @@ const defaultCurrencySymbol = computed(() => {
 })
 
 const items = computed(() => {
+  console.log('1')
   if (!memberId.value) return []
+  console.log('2')
+  if (!tripStore.trips.length) return []
+  console.log('3')
+  console.log(`${tripMemberStore.trip_members.length}`)
+  if (!tripMemberStore.trip_members.length) return []
+  console.log('4')
+
   const memberTrips = tripMemberStore.getTripMembersByMemberId(memberId.value)
+  console.log('тут')
   return memberTrips
     .map(member => tripStore.getTripById(member.trip_id))
-    .filter(trip => trip !== null)
+    .filter(Boolean)
 })
 
 const getParticipantsCount = (tripId) => {
   const members = tripMemberStore.getTripMembersByTripId(tripId)
-  return Array.isArray(members) ? members.length-1 : 0
+  return Array.isArray(members) ? members.length - 1 : 0
 }
 
 const onCardTrip = (item) => {

@@ -107,12 +107,15 @@ const userStore = useUserStore()
 const expenseTypeStore = useExpenseTypeStore()
 const currencyStore = useCurrencyStore()
 
-const expense = ref<Expense | null>(null)
+const expense = computed<Expense | null>(() => {
+  const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
+  return allExpenses.find(e => e.id === props.expenseId) || null
+})
 const showEditDialog = ref(false)
 
 onMounted(() => {
-  const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
-  expense.value = allExpenses.find(e => e.id === props.expenseId) || null
+  void expenseStore.loadAll()
+  void expenseTypeStore.loadExpenseTypes()
 })
 
 const allocations = computed(() => {
@@ -162,9 +165,9 @@ const onEdit = () => {
   showEditDialog.value = true
 }
 
-const onDelete = () => {
+const onDelete = async () => {
   if (confirm('Удалить этот расход?')) {
-    expenseStore.deleteExpense(expense.value!.id)
+    await expenseStore.deleteExpense(expense.value!.id)
     $navigateBack()
   }
 }
@@ -172,8 +175,7 @@ const onDelete = () => {
 const onExpenseUpdated = () => {
   showEditDialog.value = false
   // Обновляем данные
-  const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
-  expense.value = allExpenses.find(e => e.id === props.expenseId) || null
+  // expense is computed from store state
 }
 </script>
 

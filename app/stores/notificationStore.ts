@@ -1,84 +1,144 @@
-import { defineStore } from 'pinia';
-import { ref } from 'nativescript-vue';
-import type { Notification } from '~/models/notification';
-
-import Notifications from '../seeders/notifications.json';
+import { defineStore } from 'pinia'
+import { ref } from 'nativescript-vue'
+import type { Notification } from '~/models/notification'
+import Notifications from '../seeders/notifications.json'
+import {
+  fetchNotifications,
+  fetchNotificationsByUserId,
+  fetchNotificationsByTripId,
+  fetchUnreadNotifications,
+  createNotification as createNotificationApi,
+  markNotificationRead as markNotificationReadApi,
+  markAllNotificationsRead as markAllNotificationsReadApi,
+  deleteNotification as deleteNotificationApi
+} from '~/services/notificationApi'
 
 export const useNotificationStore = defineStore('notification', () => {
-  // Состояние
-  const notifications = ref<Notification[]>([]);
+  const notifications = ref<Notification[]>([])
+  const isSyncing = ref(false)
+  const syncError = ref<string | null>(null)
 
-  // Инициализация из сидов (в будущем будет из API)
-  function init() {
-    notifications.value = JSON.parse(JSON.stringify(Notifications));
-    console.log(`[NotificationStore] Загружено ${notifications.value.length} уведомлений из тестовых данных`);
-  }
-  init();
-
-  // Геттеры
-  const getAllNotifications = () => notifications.value;
-
-  // Получить уведомления для конкретного пользователя
-  const getNotificationsByUserId = (userId: number): Notification[] => {
-    return notifications.value.filter(n => n.user_id === userId);
-  };
-
-  // Получить непрочитанные уведомления для пользователя
-  const getUnreadNotificationsByUserId = (userId: number): Notification[] => {
-    return getNotificationsByUserId(userId).filter(n => !n.is_read);
-  };
-
-  // Получить количество непрочитанных уведомлений для пользователя
-  const getUnreadCountByUserId = (userId: number): number => {
-    return getUnreadNotificationsByUserId(userId).length;
-  };
-
-  // Получить уведомления для определенной поездки
-  const getNotificationsByTripId = (tripId: number): Notification[] => {
-    return notifications.value.filter(n => n.trip_id === tripId);
-  };
-
-  // Методы для изменения
-  // Пометить одно уведомление как прочитанное
-  function markAsRead(notificationId: number) {
-    const notification = notifications.value.find(n => n.id === notificationId);
-    if (notification && !notification.is_read) {
-      notification.is_read = true;
+  async function loadAllNotifications() {
+    if (isSyncing.value) return
+    isSyncing.value = true
+    syncError.value = null
+    try {
+      notifications.value = await fetchNotifications()
+    } catch (error) {
+      syncError.value = error instanceof Error ? error.message : 'Failed to load notifications'
+      console.warn('[NotificationStore] Failed to load from API', error)
+    } finally {
+      isSyncing.value = false
     }
   }
 
-  // Пометить все уведомления пользователя как прочитанные
-  function markAllAsRead(userId: number) {
-    getNotificationsByUserId(userId).forEach(notification => {
-      notification.is_read = true;
-    });
+  async function loadNotificationsByUserId(userId: number) {
+    if (isSyncing.value) return
+    isSyncing.value = true
+    syncError.value = null
+    try {
+      notifications.value = await fetchNotificationsByUserId(userId)
+    } catch (error) {
+      syncError.value = error instanceof Error ? error.message : 'Failed to load notifications'
+      console.warn('[NotificationStore] Failed to load from API', error)
+    } finally {
+      isSyncing.value = false
+    }
   }
 
-  // Добавить новое уведомление
-  function addNotification(notification: Omit<Notification, 'id'>) {
-    const newNotification: Notification = {
-      ...notification,
-      id: Math.max(0, ...notifications.value.map(n => n.id)) + 1,
-      is_read: false // Новые уведомления по умолчанию непрочитанные
-    };
-    notifications.value.unshift(newNotification); // Добавляем в начало массива
+  async function loadNotificationsByTripId(tripId: number) {
+    if (isSyncing.value) return
+    isSyncing.value = true
+    syncError.value = null
+    try {
+      notifications.value = await fetchNotificationsByTripId(tripId)
+    } catch (error) {
+      syncError.value = error instanceof Error ? error.message : 'Failed to load notifications'
+      console.warn('[NotificationStore] Failed to load from API', error)
+    } finally {
+      isSyncing.value = false
+    }
   }
 
-  // Возвращаем публичный API
+  async function loadUnreadNotifications(userId?: number) {
+    if (isSyncing.value) return
+    isSyncing.value = true
+    syncError.value = null
+    try {
+      notifications.value = await fetchUnreadNotifications(userId)
+    } catch (error) {
+      syncError.value = error instanceof Error ? error.message : 'Failed to load notifications'
+      console.warn('[NotificationStore] Failed to load from API', error)
+    } finally {
+      isSyncing.value = false
+    }
+  }
+
+  function init() {
+    notifications.value = JSON.parse(JSON.stringify(Notifications))
+  }
+  init()
+
+  const getAllNotifications = () => notifications.value
+
+  const getNotificationsByUserId = (userId: number): Notification[] => {
+    return notifications.value.filter(n => n.user_id === userId)
+  }
+
+  const getUnreadNotificationsByUserId = (userId: number): Notification[] => {
+    return getNotificationsByUserId(userId).filter(n => !n.is_read)
+  }
+
+  const getUnreadCountByUserId = (userId: number): number => {
+    return getUnreadNotificationsByUserId(userId).length
+  }
+
+  const getNotificationsByTripId = (tripId: number): Notification[] => {
+    return notifications.value.filter(n => n.trip_id === tripId)
+  }
+
+  async function markAsRead(notificationId: number) {
+    const updated = await markNotificationReadApi(notificationId)
+    const index = notifications.value.findIndex(n => n.id === notificationId)
+    if (index !== -1) notifications.value[index] = updated
+    return updated
+  }
+
+  async function markAllAsRead(userId: number) {
+    await markAllNotificationsReadApi(userId)
+    notifications.value = notifications.value.map(n =>
+      n.user_id === userId ? { ...n, is_read: true } : n
+    )
+  }
+
+  async function addNotification(notification: Omit<Notification, 'id'>) {
+    const id = await createNotificationApi(notification)
+    const created: Notification = { ...notification, id }
+    notifications.value.unshift(created)
+    return created
+  }
+
+  async function deleteNotification(notificationId: number) {
+    await deleteNotificationApi(notificationId)
+    notifications.value = notifications.value.filter(n => n.id !== notificationId)
+  }
+
   return {
-    // Состояние
     notifications,
-    
-    // Геттеры
+    isSyncing,
+    syncError,
+    loadAllNotifications,
+    loadNotificationsByUserId,
+    loadNotificationsByTripId,
+    loadUnreadNotifications,
     getAllNotifications,
     getNotificationsByUserId,
     getUnreadNotificationsByUserId,
     getUnreadCountByUserId,
     getNotificationsByTripId,
-    
-    // Методы
     markAsRead,
     markAllAsRead,
-    addNotification
-  };
-});
+    addNotification,
+    deleteNotification
+  }
+})

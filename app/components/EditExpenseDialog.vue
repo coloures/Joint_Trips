@@ -108,7 +108,6 @@ const error = ref('')
 const participants = computed(() => tripMemberStore.getTripMembersByTripId(props.tripId))
 const categories = computed(() => expenseTypeStore.getAllExpenseTypes())
 
-// Для ListPicker нужны массивы строк
 const categoryNames = computed(() => categories.value.map(c => c.name))
 const payerNames = computed(() => participants.value.map(p => getUserName(p.member_id)))
 
@@ -149,6 +148,8 @@ const toggleParticipant = (userId: number) => {
 }
 
 onMounted(() => {
+  if (!props.expense) return
+
   if (props.expense) {
     expenseDescription.value = props.expense.description || ''
     expenseAmount.value = String(props.expense.amount)
@@ -163,7 +164,7 @@ onMounted(() => {
   }
 })
 
-const updateExpense = () => {
+const updateExpense = async () => {
   if (!expenseDescription.value || !expenseAmount.value || !selectedCategoryId.value || !selectedPayerId.value) {
     error.value = 'Заполните обязательные поля'
     return
@@ -186,7 +187,7 @@ const updateExpense = () => {
   
   if (props.expense) {
     // Обновляем расход
-    expenseStore.updateExpense(props.expense.id, {
+    await expenseStore.updateExpense(props.expense.id, {
       description: expenseDescription.value,
       amount: amount,
       type_of_expense: selectedCategoryId.value,
@@ -196,23 +197,25 @@ const updateExpense = () => {
     
     // Удаляем старые распределения
     const oldAllocations = expenseStore.getAllocationsByExpenseId(props.expense.id)
-    oldAllocations.forEach(allocation => {
-      expenseStore.deleteExpenseAllocation(allocation.id)
-    })
+    await Promise.all(
+      oldAllocations.map(allocation => expenseStore.deleteExpenseAllocation(allocation.id))
+    )
     
     // Добавляем новые распределения
     const amountPerPerson = amount / selectedUserIds.length
-    selectedUserIds.forEach(userId => {
-      expenseStore.addExpenseAllocation({
-        expense_id: props.expense!.id,
-        user_id: userId,
-        amount: amountPerPerson
-      })
-    })
+    await Promise.all(
+      selectedUserIds.map(userId =>
+        expenseStore.addExpenseAllocation({
+          expense_id: props.expense!.id,
+          user_id: userId,
+          amount: amountPerPerson
+        })
+      )
+    )
+
+    emit('updated')
+    close()
   }
-  
-  emit('updated')
-  close()
 }
 
 const close = () => {

@@ -207,11 +207,17 @@ onMounted(() => {
 const loadTrip = async () => {
   sendScreenEvent({ type: 'START' })
   try {
-    const loadedTrip = await Promise.resolve(tripStore.getTripById(props.tripId))
+    const loadedTrip = await tripStore.loadTripById(props.tripId)
     if (!loadedTrip) {
       sendScreenEvent({ type: 'REJECT', error: 'Поездка не найдена' })
       return
     }
+    void Promise.all([
+      budgetCategoryStore.loadTripBudgetCategories(props.tripId),
+      tripMemberStore.loadTripMembersByTripId(props.tripId),
+      expenseStore.loadAll(),
+      expenseTypeStore.loadExpenseTypes()
+    ])
     sendScreenEvent({ type: 'RESOLVE', data: loadedTrip })
   } catch (error) {
     sendScreenEvent({

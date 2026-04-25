@@ -4,10 +4,18 @@ import type { Expense } from '~/models/expense';
 import type { ExpenseAllocation } from '~/models/expense_allocation';
 import type { TripMember } from '~/models/trip_member';
 
-import Expenses from '../seeders/expenses.json';
-import ExpenseAllocations from '../seeders/expensesallocation.json';
-
 import { useTripMemberStore } from '~/stores/tripMemberStore';
+import {
+  fetchExpenses,
+  createExpense as createExpenseApi,
+  updateExpense as updateExpenseApi,
+  deleteExpense as deleteExpenseApi
+} from '~/services/expenseApi';
+import {
+  fetchExpenseAllocations,
+  createAllocation as createAllocationApi,
+  deleteAllocation as deleteAllocationApi
+} from '~/services/allocationApi';
 
 export interface Debt {
   fromUserId: number; // Кто должен
@@ -19,13 +27,35 @@ export const useExpenseStore = defineStore('expense', () => {
   // Состояние
   const expenses = ref<Expense[]>([]);
   const expenseAllocations = ref<ExpenseAllocation[]>([]);
+  const isSyncing = ref(false);
+  const syncError = ref<string | null>(null);
 
-  function init() {
-    expenses.value = JSON.parse(JSON.stringify(Expenses));
-    expenseAllocations.value = JSON.parse(JSON.stringify(ExpenseAllocations));
+  async function loadAll() {
+    if (isSyncing.value) return;
+    isSyncing.value = true;
+    syncError.value = null;
+    try {
+      const loadedExpenses = await fetchExpenses()
+      console.log('loadedExpenses сделан');
+      const loadedAllocations = await fetchExpenseAllocations()
+      console.log('loadedAllocations сделан');
+      expenses.value = loadedExpenses;
+      expenseAllocations.value = loadedAllocations;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to sync expenses';
+      syncError.value = message;
+      console.warn('[ExpenseStore] Failed to sync with API', error);
+    } finally {
+      console.log('[ExpenseStore] сделал свое дело');
+      isSyncing.value = false;
+    }
+  }
+
+  async function init() {
+    void await loadAll();
     console.log(`[ExpenseStore] Загружено ${expenses.value.length} расходов и ${expenseAllocations.value.length} распределений`);
   }
-  init();
+  // init();
 
   // Получить все расходы
   const getAllExpenses = () => expenses.value;
@@ -119,39 +149,43 @@ export const useExpenseStore = defineStore('expense', () => {
   }
 
   // Методы для добавления данных
-  function addExpense(expense: Omit<Expense, 'id'>) {
-    const newExpense: Expense = {
-      ...expense,
-      id: Math.max(0, ...expenses.value.map(e => e.id)) + 1
-    };
-    expenses.value.push(newExpense);
-    return newExpense.id
+  async function addExpense(expense: Omit<Expense, 'id'>) {
+    const created = await createExpenseApi(expense);
+    expenses.value.push(created);
+    return created.id;
   }
 
-  function addExpenseAllocation(allocation: Omit<ExpenseAllocation, 'id'>) {
-    const newAllocation: ExpenseAllocation = {
-      ...allocation,
-      id: Math.max(0, ...expenseAllocations.value.map(e => e.id)) + 1
-    };
-    expenseAllocations.value.push(newAllocation);
-
-  
+  async function addExpenseAllocation(allocation: Omit<ExpenseAllocation, 'id'>) {
+    const created = await createAllocationApi({
+      expense_id: allocation.expense_id,
+      user_id: allocation.user_id,
+      amount: allocation.amount,
+      isPaid: allocation.isPaid
+    });
+    expenseAllocations.value.push(created);
+    return created.id;
   }
 
-  function updateExpense(id: number, updates: Partial<Omit<Expense, 'id'>>) {
-    const index = expenses.value.findIndex(e => e.id === id)
+  async function updateExpense(id: number, updates: Partial<Omit<Expense, 'id'>>) {
+    const updated = await updateExpenseApi(id, updates);
+    const index = expenses.value.findIndex(e => e.id === id);
     if (index !== -1) {
-      expenses.value[index] = { ...expenses.value[index], ...updates }
+      expenses.value[index] = updated;
+    } else {
+      expenses.value.push(updated);
     }
+    return updated;
   }
 
-  function deleteExpense(id: number) {
+  async function deleteExpense(id: number) {
+    await deleteExpenseApi(id);
     expenses.value = expenses.value.filter(e => e.id !== id)
     // Удаляем также распределения этого расхода
     expenseAllocations.value = expenseAllocations.value.filter(a => a.expense_id !== id)
   }
 
-  function deleteExpenseAllocation(id: number) {
+  async function deleteExpenseAllocation(id: number) {
+    await deleteAllocationApi(id);
     expenseAllocations.value = expenseAllocations.value.filter(a => a.id !== id)
   }
 
@@ -160,6 +194,8 @@ export const useExpenseStore = defineStore('expense', () => {
     // Состояние
     expenses,
     expenseAllocations,
+    isSyncing,
+    syncError,
     
     // Геттеры
     getAllExpenses,
@@ -173,6 +209,7 @@ export const useExpenseStore = defineStore('expense', () => {
     
     // Метод
     calculateDebts,
+    loadAll,
     
     // Методы для изменения
     addExpense,

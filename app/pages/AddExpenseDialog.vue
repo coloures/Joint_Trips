@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, $navigateBack } from 'nativescript-vue'
+import { ref, computed, watch, onMounted, $navigateBack } from 'nativescript-vue'
 import { useMachine } from '@xstate/vue'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
@@ -112,6 +112,15 @@ const userStore = useUserStore()
 const budgetCategoryStore = useTripBudgetCategoryStore()
 const currencyStore = useCurrencyStore()
 const { snapshot: submitSnapshot, send: sendSubmitEvent } = useMachine(asyncActionMachine)
+
+onMounted(() => {
+  void Promise.all([
+    budgetCategoryStore.loadTripBudgetCategories(props.tripId),
+    tripMemberStore.loadTripMembersByTripId(props.tripId),
+    expenseTypeStore.loadExpenseTypes(),
+    expenseStore.loadAll()
+  ])
+})
 
 const expenseDescription = ref('')
 const expenseAmount = ref('')
@@ -275,7 +284,7 @@ const addExpense = async () => {
   error.value = ''
 
   try {
-    const newExpense = expenseStore.addExpense({
+    const newExpense = await expenseStore.addExpense({
       trip_id: props.tripId,
       description: expenseDescription.value,
       amount: amount,
@@ -286,13 +295,13 @@ const addExpense = async () => {
     })
 
     const amountPerPerson = amount / selectedUserIds.length
-    selectedUserIds.forEach(userId => {
+    await Promise.all(selectedUserIds.map(userId =>
       expenseStore.addExpenseAllocation({
         expense_id: newExpense,
         user_id: userId,
         amount: amountPerPerson
       })
-    })
+    ))
 
     sendSubmitEvent({ type: 'RESOLVE' })
     close()
