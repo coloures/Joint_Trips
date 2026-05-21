@@ -42,6 +42,7 @@ import CardDebt from '../components/UI/CardDebt.vue'
 import CardNotification from '~/components/UI/CardNotification.vue'
 import CardAddingTrip from '~/components/UI/CardAddingTrip.vue'
 import DebtsPage from './DebtsPage.vue'
+import NotificationsPage from './NotificationsPage.vue'
 import TripDetails from './TripDetails.vue'
 import AddTrip from './AddTrip.vue'
 
@@ -121,18 +122,21 @@ const onCardAddingTrip = () => {
 }
 
 const onCardDept = () => {
-  console.log('У вас долг:', debtAmount.value, 'рублей.')
-  console.log(tripMemberStore.getTripMembersByMemberId(memberId.value).map(t => t.trip_id))
+  if (!memberId.value) return
   $navigateTo(DebtsPage, {
     props: {
       tripIds: tripMemberStore.getTripMembersByMemberId(memberId.value).map(t => t.trip_id),
       memberId: memberId.value
     }
   })
-
 }
 
 const onCardNotification = () => {
-  console.log('Количество уведомлений:', notificationCount.value)
+  if (!memberId.value) return
+  $navigateTo(NotificationsPage, {
+    props: {
+      userId: memberId.value
+    }
+  })
 }
 </script>
