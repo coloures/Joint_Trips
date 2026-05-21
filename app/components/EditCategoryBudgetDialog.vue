@@ -72,7 +72,7 @@ const getCategoryEmoji = (categoryName: string): string => {
   return emojis[categoryName] || '💰'
 }
 
-const saveBudget = () => {
+const saveBudget = async () => {
   const amount = parseInt(budgetAmount.value)
   
   if (isNaN(amount) || amount < 0) {
@@ -80,12 +80,15 @@ const saveBudget = () => {
     return
   }
   
-  if (props.category) {
-    budgetCategoryStore.setBudgetForCategory(props.tripId, props.category.id, amount)
+  if (!props.category) return
+
+  try {
+    await budgetCategoryStore.setBudgetForCategory(props.tripId, props.category.id, amount)
+    emit('saved')
+    close()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р±СЋРґР¶РµС‚'
   }
-  
-  emit('saved')
-  close()
 }
 
 const close = () => {

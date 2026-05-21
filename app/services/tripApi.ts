@@ -90,16 +90,16 @@ export const normalizeTrip = (dto: TripDto): Trip => ({
 })
 
 export const fetchTrips = () =>
-  request<TripDto[]>('/trips').then(list => list.map(normalizeTrip))
+  request<TripDto[]>('/trips/').then(list => list.map(normalizeTrip))
 
 export const fetchTripById = (id: number) =>
   request<TripDto>(`/trips/${id}`).then(normalizeTrip)
 
 export const createTrip = (payload: TripCreatePayload) =>
-  request<TripDto>('/trips', {
+  request<number>('/trips/', {
     method: 'POST',
     body: JSON.stringify(toTripCreateDto(payload))
-  }).then(normalizeTrip)
+  }).then(fetchTripById)
 
 export const updateTrip = (id: number, payload: TripUpdatePayload) =>
   request<TripDto>(`/trips/${id}`, {

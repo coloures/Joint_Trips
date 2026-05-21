@@ -13,14 +13,14 @@ export interface CurrencyUpdatePayload {
   symbol?: string
 }
 
-export const fetchCurrencies = () => request<Currency[]>('/currencies')
+export const fetchCurrencies = () => request<Currency[]>('/currencies/')
 
 export const fetchCurrencyById = (id: number) => request<Currency>(`/currencies/${id}`)
 
 export const fetchCurrencyByCode = (code: string) => request<Currency>(`/currencies/by-code/${code}`)
 
 export const createCurrency = (payload: CurrencyCreatePayload) =>
-  request<number>('/currencies', {
+  request<number>('/currencies/', {
     method: 'POST',
     body: JSON.stringify(payload)
   })

@@ -262,7 +262,7 @@ const onSubmit = async () => {
     }
     
     // 2. Добавляем создателя как участника
-    tripMemberStore.addTripMember({
+    await tripMemberStore.addTripMember({
       trip_id: tripId,
       member_id: creatorId,
       status: 'confirmed',
