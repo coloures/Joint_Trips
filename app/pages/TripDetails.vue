@@ -2,31 +2,30 @@
   <Page>
     <ActionBar class="hidden" />
     <GridLayout rows="auto, *">
-
+      
       <GridLayout
       columns="auto, *"
       height="30"
       marginTop="24"
       paddingLeft="24"
       paddingRight="24"
+      row="0"
       >
-      <GridLayout
-        col="0"
-        width="30"
-        height="30"
-        @tap="$navigateBack"
-        rippleColor="#ccc"
-      >
+        <GridLayout
+          col="0"
+          width="30"
+          height="30"
+          @tap="$navigateBack"
+          rippleColor="#ccc"
+        >
         <Image
           src="~/assets/icons/Arrow_left.png"
           width="30"
           height="30"
           stretch="aspectFit"
         />
-  </GridLayout>
-
-  <StackLayout col="1" />
-</GridLayout>
+        </GridLayout>
+      </GridLayout>
 
       <ScrollView row="1">
         <StackLayout class="p-4">
@@ -38,7 +37,6 @@
           </StackLayout>
 
           <GridLayout class="particapantsmain"columns="auto, auto, auto" rows="auto">
-
             <StackLayout orientation="vertical" col="0" marginTop="4">
                <Label class="trip-title" text="Участники"/>
                <Label class="trip-title3" :text="`${participantsCount} человек`" marginTop="8" />
@@ -376,7 +374,6 @@ const openExpenseDetails = (expenseId: number) => {
 .trip-title3 {
   font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
   font-size: 20;
-  font-weight: light;
   color: #6F7071;
 }
 

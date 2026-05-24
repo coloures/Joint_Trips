@@ -7,6 +7,7 @@
 <script>
 export default {
   name: 'TravelCard',
+  emits: ['addNewTrip'],
   props: {
     icon: {
       type: String,

@@ -13,6 +13,7 @@
 <script>
 export default {
   name: 'TravelCard',
+  emits: ['tap'],
   props: {
     icon: {
       type: String,
