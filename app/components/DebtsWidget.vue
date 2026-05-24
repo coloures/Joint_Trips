@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'nativescript-vue'
+import { computed, onMounted, ref} from 'nativescript-vue'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useTripStore } from '~/stores/tripStore'
 import { useUserStore } from '~/stores/userStore'
@@ -68,12 +68,22 @@ const props = defineProps<{
   tripId: number
 }>()
 
+type Debt = {
+  fromUserId: number
+  toUserId: number
+  amount: number
+}
+
 const expenseStore = useExpenseStore()
 const tripStore = useTripStore()
 const userStore = useUserStore()
 const currencyStore = useCurrencyStore()
 
-const debts = computed(() => expenseStore.calculateDebts(props.tripId))
+const debts = ref<Debt[]>([])
+
+onMounted(async () => {
+  debts.value = await expenseStore.loadDebts(props.tripId)
+})
 
 const trip = computed(() => tripStore.getTripById(props.tripId))
 

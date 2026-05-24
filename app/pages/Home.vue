@@ -1,5 +1,8 @@
 <template>
   <Page>
+    <ActionBar title="Совместные поездки" backgroundColor="#3b82f6" color="white">
+      <ActionItem text="Выйти" android:position="actionBar" @tap="onLogout" />
+    </ActionBar>
     <ScrollView>
       <StackLayout class="w-full p-4">
         <GridLayout columns="*, *" class="w-full mb-4">
@@ -30,7 +33,8 @@
 </template>
 
 <script setup>
-import { computed, $navigateTo, onMounted } from 'nativescript-vue'
+import { computed, $navigateTo, onMounted, ref, watch } from 'nativescript-vue'
+import * as dialogs from '@nativescript/core/ui/dialogs'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
@@ -55,29 +59,50 @@ const currencyStore = useCurrencyStore()
 
 const memberId = computed(() => userStore.currentUserId)
 
-onMounted(() => {
-  // Data bootstrap happens in `app/App.vue` after login.
+onMounted(async () => {
+  await loadDebtAmount()
 })
+
+watch(memberId, async () => {
+  await loadDebtAmount()
+})
+
+watch(
+  () => tripMemberStore.trip_members,
+  async () => {
+    await loadDebtAmount()
+  },
+  { deep: true }
+)
 
 const notificationCount = computed(() => {
   if (!memberId.value) return 0
   return notificationStore.getUnreadCountByUserId(memberId.value)
 })
 
-const debtAmount = computed(() => {
-  if (!memberId.value) return 0
-  const memberTrips = tripMemberStore.getTripMembersByMemberId(memberId.value)
+const debtAmount = ref(0)
+
+const loadDebtAmount = async () => {
+  if (!memberId.value) return
+
+  const memberTrips = tripMemberStore
+    .getTripMembersByMemberId(memberId.value)
+    .filter(member => member.status === 'confirmed')
+
   let totalDebt = 0
 
-  memberTrips.forEach(memberTrip => {
-    const debts = expenseStore.calculateDebts(memberTrip.trip_id)
-    debts.forEach(debt => {
-      if (debt.fromUserId === memberId.value) totalDebt += debt.amount
-    })
-  })
+  for (const memberTrip of memberTrips) {
+    const debts = await expenseStore.loadDebts(memberTrip.trip_id)
 
-  return totalDebt
-})
+    debts.forEach(debt => {
+      if (debt.fromUserId === memberId.value) {
+        totalDebt += debt.amount
+      }
+    })
+  }
+
+  debtAmount.value = totalDebt
+}
 
 const defaultCurrencySymbol = computed(() => {
   return currencyStore.currencies.find(c => c.id === 1)?.symbol || '₽'
@@ -94,15 +119,18 @@ const items = computed(() => {
   console.log('4')
 
   const memberTrips = tripMemberStore.getTripMembersByMemberId(memberId.value)
-  console.log('тут')
+    .filter(member => member.status === 'confirmed')
   return memberTrips
     .map(member => tripStore.getTripById(member.trip_id))
     .filter(Boolean)
 })
 
 const getParticipantsCount = (tripId) => {
-  const members = tripMemberStore.getTripMembersByTripId(tripId)
-  return Array.isArray(members) ? members.length - 1 : 0
+  const members = tripMemberStore
+    .getTripMembersByTripId(tripId)
+    .filter(m => m.status === 'confirmed')
+
+  return members.length > 0 ? members.length - 1 : 0
 }
 
 const onCardTrip = (item) => {
@@ -125,7 +153,10 @@ const onCardDept = () => {
   if (!memberId.value) return
   $navigateTo(DebtsPage, {
     props: {
-      tripIds: tripMemberStore.getTripMembersByMemberId(memberId.value).map(t => t.trip_id),
+      tripIds: tripMemberStore
+        .getTripMembersByMemberId(memberId.value)
+        .filter(member => member.status === 'confirmed')
+        .map(t => t.trip_id),
       memberId: memberId.value
     }
   })
@@ -138,5 +169,17 @@ const onCardNotification = () => {
       userId: memberId.value
     }
   })
+}
+
+const onLogout = async () => {
+  const confirmed = await dialogs.confirm({
+    title: 'Выход',
+    message: 'Выйти из аккаунта?',
+    okButtonText: 'Да',
+    cancelButtonText: 'Нет'
+  })
+
+  if (!confirmed) return
+  userStore.logout()
 }
 </script>

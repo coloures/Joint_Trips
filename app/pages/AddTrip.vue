@@ -6,18 +6,15 @@
 
     <ScrollView>
       <StackLayout class="p-4">
-        
-        <!-- 🔹 Глобальная ошибка -->
         <Label v-if="globalError" :text="globalError" class="error global-error" />
 
-        <!-- 🔹 Эмодзи -->
         <StackLayout class="form-group">
           <Label text="Эмодзи" class="label" />
           <StackLayout orientation="horizontal" class="emoji-row">
-            <Label 
-              v-for="emo in emojiOptions" 
-              :key="emo" 
-              :text="emo" 
+            <Label
+              v-for="emo in emojiOptions"
+              :key="emo"
+              :text="emo"
               class="emoji"
               :class="{ active: formData.emoji === emo }"
               @tap="formData.emoji = emo"
@@ -25,50 +22,27 @@
           </StackLayout>
         </StackLayout>
 
-        <!-- 🔹 Название -->
         <StackLayout class="form-group">
           <Label text="Название *" class="label" />
-          <TextField 
-            v-model="formData.title"
-            hint="Отпуск в Сочи" 
-            class="input"
-          />
+          <TextField v-model="formData.title" hint="Отпуск в Сочи" class="input" />
           <Label v-if="errors.title" :text="errors.title" class="error" />
         </StackLayout>
 
-        <!-- 🔹 Место -->
         <StackLayout class="form-group">
           <Label text="Куда едем? *" class="label" />
-          <TextField 
-            v-model="formData.country"
-            hint="Россия, Сочи" 
-            class="input"
-          />
+          <TextField v-model="formData.country" hint="Россия, Сочи" class="input" />
           <Label v-if="errors.country" :text="errors.country" class="error" />
         </StackLayout>
 
-        <!-- 🔹 Даты -->
         <StackLayout class="form-group">
           <Label text="Даты поездки *" class="label" />
-          
-          <TextField 
-            v-model="formData.startDate"
-            hint="ГГГГ-ММ-ДД (заезд)" 
-            class="input"
-          />
-          
-          <TextField 
-            v-model="formData.endDate"
-            hint="ГГГГ-ММ-ДД (выезд)" 
-            class="input mt-2"
-          />
-          
+          <TextField v-model="formData.startDate" hint="ГГГГ-ММ-ДД (заезд)" class="input" />
+          <TextField v-model="formData.endDate" hint="ГГГГ-ММ-ДД (выезд)" class="input mt-2" />
           <Label v-if="errors.startDate" :text="errors.startDate" class="error" />
           <Label v-if="errors.endDate" :text="errors.endDate" class="error" />
           <Label text="Формат: ГГГГ-ММ-ДД" class="hint" />
         </StackLayout>
 
-        <!-- 🔹 Валюта -->
         <StackLayout class="form-group">
           <Label text="Валюта" class="label" />
           <DropDown
@@ -79,50 +53,90 @@
           />
         </StackLayout>
 
-        <!-- 🔹 Бюджет -->
         <StackLayout class="form-group">
           <Label :text="`Бюджет (${currencySymbol})`" class="label" />
-          <TextField 
-            v-model="formData.budget"
-            hint="100000" 
-            keyboard-type="number"
-            class="input"
-          />
+          <TextField v-model="formData.budget" hint="100000" keyboard-type="number" class="input" />
           <Label v-if="errors.budget" :text="errors.budget" class="error" />
         </StackLayout>
 
-        <!-- 🔹 Кнопки -->
+        <StackLayout class="form-group">
+          <Label text="Участники по номеру телефона" class="label" />
+          <TextField
+            v-model="participantPhone"
+            hint="+79161234567"
+            keyboard-type="phone"
+            class="input"
+          />
+          <Button
+            text="Добавить участника"
+            class="btn-outline add-participant-btn"
+            :isEnabled="!isLookingUpParticipant"
+            @tap="addParticipantByPhone"
+          />
+          <Label v-if="participantError" :text="participantError" class="error" />
+          <Label text="Добавленные участники получат приглашение и смогут подтвердить участие." class="hint" />
+
+          <StackLayout v-if="invitedParticipants.length" class="participants-list">
+            <GridLayout
+              v-for="participant in invitedParticipants"
+              :key="participant.id"
+              columns="*, auto"
+              class="participant-item"
+            >
+              <StackLayout col="0">
+                <Label :text="participant.fullName" class="participant-name" />
+                <Label :text="participant.phone_number" class="participant-phone" />
+              </StackLayout>
+              <Button col="1" text="Удалить" class="remove-btn" @tap="removeParticipant(participant.id)" />
+            </GridLayout>
+          </StackLayout>
+        </StackLayout>
+
         <GridLayout columns="*, *" class="mt-4">
           <Button col="0" text="Сбросить" class="btn-outline" @tap="onReset" />
-          <Button 
-            col="1" 
-            :text="isSubmitting ? 'Создаём...' : '✅ Создать поездку'" 
+          <Button
+            col="1"
+            :text="isSubmitting ? 'Создаём...' : '✅ Создать поездку'"
             class="btn-primary"
             :enabled="!isSubmitting"
-            @tap="onSubmit" 
+            @tap="onSubmit"
           />
         </GridLayout>
-
       </StackLayout>
     </ScrollView>
   </Page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, $navigateBack, watch } from 'nativescript-vue'
+import { ref, computed, watch, $navigateBack } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useCurrencyStore } from '~/stores/currencyStore'
 import { useUserStore } from '~/stores/userStore'
+import { useNotificationStore } from '~/stores/notificationStore'
+import { fetchUserbyPhoneNumber } from '~/services/userApi'
 import * as dialogs from '@nativescript/core/ui/dialogs'
 import type { SelectedIndexChangedEventData } from 'nativescript-drop-down'
+
+interface InvitedParticipant {
+  id: number
+  first_name: string
+  last_name: string
+  phone_number: string
+  fullName: string
+}
 
 const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 const currencyStore = useCurrencyStore()
 const userStore = useUserStore()
+const notificationStore = useNotificationStore()
 
 const selectedCurrencyId = ref<number | null>(null)
+const participantPhone = ref('')
+const participantError = ref('')
+const isLookingUpParticipant = ref(false)
+const invitedParticipants = ref<InvitedParticipant[]>([])
 
 watch(
   () => currencyStore.currencies,
@@ -153,7 +167,6 @@ const currencySymbol = computed(() => {
   return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
 })
 
-// Форма
 const formData = ref({
   title: '',
   emoji: '🌴',
@@ -175,7 +188,49 @@ const isSubmitting = ref(false)
 const globalError = ref('')
 const emojiOptions = ['🌴', '✈️', '🏔️', '🏖️', '🗼', '🏰', '🚗', '⛺']
 
-// Валидация
+const normalizePhone = (value: string) => value.replace(/\s+/g, '').trim()
+
+const addParticipantByPhone = async () => {
+  participantError.value = ''
+  const phone = normalizePhone(participantPhone.value)
+
+  if (!phone) {
+    participantError.value = 'Введите номер телефона'
+    return
+  }
+
+  if (phone === normalizePhone(userStore.currentUser?.phone_number || '')) {
+    participantError.value = 'Создатель уже участвует в поездке'
+    return
+  }
+
+  if (invitedParticipants.value.some(user => normalizePhone(user.phone_number) === phone)) {
+    participantError.value = 'Этот участник уже добавлен'
+    return
+  }
+
+  isLookingUpParticipant.value = true
+  try {
+    const user = await fetchUserbyPhoneNumber(phone)
+    invitedParticipants.value.push({
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone_number: user.phone_number,
+      fullName: `${user.first_name} ${user.last_name}`.trim()
+    })
+    participantPhone.value = ''
+  } catch (lookupError: any) {
+    participantError.value = lookupError?.message || 'Пользователь с таким номером не найден'
+  } finally {
+    isLookingUpParticipant.value = false
+  }
+}
+
+const removeParticipant = (participantId: number) => {
+  invitedParticipants.value = invitedParticipants.value.filter(user => user.id !== participantId)
+}
+
 const validateForm = () => {
   let isValid = true
   const newErrors = {
@@ -185,27 +240,27 @@ const validateForm = () => {
     endDate: '',
     budget: ''
   }
-  
+
   if (!formData.value.title || formData.value.title.length < 3) {
     newErrors.title = 'Минимум 3 символа'
     isValid = false
   }
-  
+
   if (!formData.value.country || formData.value.country.length < 2) {
     newErrors.country = 'Укажите место'
     isValid = false
   }
-  
+
   if (!formData.value.startDate) {
     newErrors.startDate = 'Выберите дату заезда'
     isValid = false
   }
-  
+
   if (!formData.value.endDate) {
     newErrors.endDate = 'Выберите дату выезда'
     isValid = false
   }
-  
+
   if (formData.value.startDate && formData.value.endDate) {
     const start = new Date(formData.value.startDate)
     const end = new Date(formData.value.endDate)
@@ -214,35 +269,26 @@ const validateForm = () => {
       isValid = false
     }
   }
-  
+
   if (formData.value.budget < 0) {
     newErrors.budget = 'Не может быть отрицательным'
     isValid = false
   }
-  
+
   errors.value = newErrors
   return isValid
 }
 
-// Сохранение
 const onSubmit = async () => {
-  console.log('=== СОЗДАНИЕ ПОЕЗДКИ ===')
-  
-  if (!validateForm()) {
-    console.log('Ошибки валидации:', errors.value)
-    return
-  }
-  
+  if (!validateForm()) return
+
   isSubmitting.value = true
   globalError.value = ''
-  
+
   try {
-    console.log('Сохраняем поездку:', formData.value)
-    
     const creatorId = userStore.currentUserId ?? 1
     const currencyId = selectedCurrencyId.value ?? currencyStore.currencies[0]?.id ?? 1
 
-    // 1. Создаём поездку в API
     const newTrip = await tripStore.createTrip({
       emoji: formData.value.emoji,
       creatorId,
@@ -256,31 +302,43 @@ const onSubmit = async () => {
     })
 
     const tripId = newTrip.id
-    
     if (!tripId) {
       throw new Error('Не удалось создать поездку')
     }
-    
-    // 2. Добавляем создателя как участника
+
     await tripMemberStore.addTripMember({
       trip_id: tripId,
       member_id: creatorId,
       status: 'confirmed',
       role: 'creator'
     })
-    
-    console.log('Поездка создана! ID:', tripId)
-    
+
+    await Promise.all(invitedParticipants.value.map(async participant => {
+      await tripMemberStore.addTripMember({
+        trip_id: tripId,
+        member_id: participant.id,
+        status: 'pending',
+        role: 'participant'
+      })
+
+      await notificationStore.addNotification({
+        trip_id: tripId,
+        user_id: participant.id,
+        type: 'trip_invite',
+        message: `${userStore.currentUser?.first_name || 'Пользователь'} приглашает вас в поездку "${formData.value.title}"`,
+        is_read: false,
+        created_at: new Date().toISOString()
+      })
+    }))
+
     await dialogs.alert({
       title: 'Успешно',
       message: 'Поездка создана!',
       okButtonText: 'OK'
     })
-    
+
     $navigateBack()
-    
   } catch (error: any) {
-    console.error('Ошибка:', error)
     globalError.value = error.message || 'Ошибка при создании поездки'
   } finally {
     isSubmitting.value = false
@@ -294,7 +352,7 @@ const onReset = async () => {
     okButtonText: 'Да',
     cancelButtonText: 'Нет'
   })
-  
+
   if (result) {
     formData.value = {
       title: '',
@@ -304,6 +362,9 @@ const onReset = async () => {
       endDate: '',
       budget: 0
     }
+    invitedParticipants.value = []
+    participantPhone.value = ''
+    participantError.value = ''
     errors.value = {
       title: '',
       country: '',
@@ -321,7 +382,7 @@ const onCancel = async () => {
     okButtonText: 'Да',
     cancelButtonText: 'Нет'
   })
-  
+
   if (result) {
     $navigateBack()
   }
@@ -329,8 +390,8 @@ const onCancel = async () => {
 </script>
 
 <style scoped>
-.form-group { 
-  margin-bottom: 16; 
+.form-group {
+  margin-bottom: 16;
 }
 
 .label {
@@ -413,7 +474,46 @@ const onCancel = async () => {
   margin-right: 8;
 }
 
-.mt-4 { 
-  margin-top: 16; 
+.mt-4 {
+  margin-top: 16;
+}
+
+.add-participant-btn {
+  margin-top: 8;
+  margin-right: 0;
+}
+
+.participants-list {
+  margin-top: 12;
+}
+
+.participant-item {
+  padding: 12;
+  border-width: 1;
+  border-color: #e5e7eb;
+  border-radius: 10;
+  margin-top: 8;
+  background-color: white;
+}
+
+.participant-name {
+  font-size: 14;
+  font-weight: 600;
+  color: #111827;
+}
+
+.participant-phone {
+  font-size: 12;
+  color: #6b7280;
+  margin-top: 2;
+}
+
+.remove-btn {
+  color: #ef4444;
+  background-color: transparent;
+  border-width: 1;
+  border-color: #fecaca;
+  border-radius: 8;
+  padding: 8 12;
 }
 </style>

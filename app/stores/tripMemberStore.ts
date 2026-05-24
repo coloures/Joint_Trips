@@ -70,6 +70,10 @@ export const useTripMemberStore = defineStore('tripMember', () => {
     return trip_members.value.filter(t => t.member_id === member_id)
   }
 
+  const getTripMemberByTripAndMemberId = (tripId: number, memberId: number): TripMember | null => {
+    return trip_members.value.find(t => t.trip_id === tripId && t.member_id === memberId) || null
+  }
+
   async function addTripMember(member: Omit<TripMember, 'id'>) {
     const created = await createTripMemberApi(member)
     trip_members.value.push(created)
@@ -104,6 +108,7 @@ export const useTripMemberStore = defineStore('tripMember', () => {
     getTripMemberById,
     getTripMembersByTripId,
     getTripMembersByMemberId,
+    getTripMemberByTripAndMemberId,
     addTripMember,
     saveTripMembers,
     deleteTripMember,

@@ -17,6 +17,8 @@ import {
   deleteAllocation as deleteAllocationApi
 } from '~/services/allocationApi';
 
+import { fetchDebtsByTripId } from '~/services/debtApi'
+
 export interface Debt {
   fromUserId: number; // Кто должен
   toUserId: number;  // Кому должен
@@ -90,6 +92,23 @@ export const useExpenseStore = defineStore('expense', () => {
     const tripExpenseIds = getExpensesByTripId(tripId).map(exp => exp.id);
     return expenseAllocations.value.filter(allocation => tripExpenseIds.includes(allocation.expense_id));
   };
+
+  async function loadDebts(tripId: number): Promise<Debt[]> {
+    try {
+      console.log('🔥 CALL API /debts')
+      const data = await fetchDebtsByTripId(tripId)
+
+      return data.map(d => ({
+        fromUserId: d.fromUserId,
+        toUserId: d.toUserId,
+        amount: d.amount
+      }))
+    } catch (error) {
+      console.log('❌ FALLBACK calculateDebts')
+      console.warn('[ExpenseStore] Failed to load debts from API, fallback to local calc', error)
+      return calculateDebts(tripId)
+    }
+  }
 
   // Упрощённый расчёт долгов: кто сколько должен каждому, без оптимизации цепочек
   function calculateDebts(tripId: number): Debt[] {
@@ -210,6 +229,7 @@ export const useExpenseStore = defineStore('expense', () => {
     // Метод
     calculateDebts,
     loadAll,
+    loadDebts,
     
     // Методы для изменения
     addExpense,
