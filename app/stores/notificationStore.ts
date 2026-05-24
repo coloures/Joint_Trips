@@ -74,6 +74,26 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
+  async function deleteReadNotificationsSafe(userId: number) {
+  const toDelete = notifications.value.filter(
+    n => n.user_id === userId &&
+         n.is_read &&
+         n.type !== 'trip_invite'
+  )
+
+  for (const n of toDelete) {
+    await deleteNotificationApi(n.id)
+  }
+
+  notifications.value = notifications.value.filter(
+    n => !(
+      n.user_id === userId &&
+      n.is_read &&
+      n.type !== 'trip_invite'
+    )
+  )
+}
+
   function init() {
     notifications.value = JSON.parse(JSON.stringify(Notifications))
   }
@@ -131,6 +151,7 @@ export const useNotificationStore = defineStore('notification', () => {
     loadNotificationsByUserId,
     loadNotificationsByTripId,
     loadUnreadNotifications,
+    deleteReadNotificationsSafe,
     getAllNotifications,
     getNotificationsByUserId,
     getUnreadNotificationsByUserId,

@@ -12,6 +12,12 @@
           <Label :text="statusText" class="summary-caption" />
         </StackLayout>
 
+        <Button 
+          text="🧹 Очистить прочитанные"
+          class="btn-clear"
+          @tap="onClearRead"
+        />
+
         <StackLayout v-if="notificationItems.length">
           <StackLayout v-for="item in notificationItems" :key="item.id" class="notification-card">
             <GridLayout columns="*, auto">
@@ -106,6 +112,12 @@ const getNotificationTitle = (type: string) => {
   }
 
   return titles[type] || 'Уведомление'
+}
+
+const onClearRead = async () => {
+  if (!props.userId) return
+
+  await notificationStore.deleteReadNotificationsSafe(props.userId)
 }
 
 const formatDate = (value: string) => {
@@ -346,5 +358,13 @@ onMounted(async () => {
   color: #6b7280;
   text-align: center;
   margin-top: 8;
+}
+
+.btn-clear {
+  background-color: #e5e7eb;
+  color: #374151;
+  border-radius: 10;
+  padding: 10;
+  margin-bottom: 10;
 }
 </style>
