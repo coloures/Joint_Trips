@@ -94,6 +94,10 @@ export const useNotificationStore = defineStore('notification', () => {
   )
 }
 
+  function addLocalNotification(notification: Notification) {
+    notifications.value.unshift(notification)
+  }
+
   function init() {
     notifications.value = JSON.parse(JSON.stringify(Notifications))
   }
@@ -149,6 +153,7 @@ export const useNotificationStore = defineStore('notification', () => {
     syncError,
     loadAllNotifications,
     loadNotificationsByUserId,
+    addLocalNotification,
     loadNotificationsByTripId,
     loadUnreadNotifications,
     deleteReadNotificationsSafe,
