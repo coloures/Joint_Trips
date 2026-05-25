@@ -1,6 +1,6 @@
 <template>
   <Page>
-    <ActionBar class="hidden" />
+    <ActionBar class="hidden"/>
     <GridLayout rows="auto, *">
       
       <GridLayout
@@ -16,7 +16,6 @@
           width="30"
           height="30"
           @tap="$navigateBack"
-          rippleColor="#ccc"
         >
         <Image
           src="~/assets/icons/Arrow_left.png"
@@ -31,52 +30,24 @@
         <StackLayout class="p-4">
 
           <StackLayout>
-            <Label class="trip-title" text="Поездка в" horizontalAlignment="center"/>
-            <Label class="trip-title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
-            <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
+            <Label class="title" text="Поездка в" horizontalAlignment="center"/>
+            <Label class="title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
+            <Label class="title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
           </StackLayout>
 
-          <GridLayout class="particapantsmain"columns="auto, auto, auto" rows="auto">
+          <GridLayout class="participants_section"columns="auto, auto, auto" rows="auto">
             <StackLayout orientation="vertical" col="0" marginTop="4">
-               <Label class="trip-title" text="Участники"/>
-               <Label class="trip-title3" :text="`${participantsCount} человек`" marginTop="8" />
+               <Label class="title" text="Участники"/>
+               <Label class="title3" :text="`${participantsCount} человек`" marginTop="8" />
             </StackLayout>
           </GridLayout>
 
+          <StackLayout class="expenses_section">
+            <Label class="title" text="Расходы"/>
+            <Label class="title3" text="Общий бюджет на поездку" marginTop="8"/>
+            <Label class="title3" :text="`${totalBudget} ₽`"/>
 
-
-          <StackLayout class="separator" />
-
-          <StackLayout class="budget-widget">
-            <GridLayout columns="*, auto" class="budget-header">
-              <Label text="💰 Бюджет поездки" class="section-title" />
-              <Button text="✎ Редактировать" class="edit-budget-btn" @tap="showEditBudgetDialog" />
-            </GridLayout>
-
-            <GridLayout columns="*, *" class="budget-stats">
-              <StackLayout class="stat-card">
-                <Label text="Общий бюджет" class="stat-label" />
-                <Label :text="`${totalBudget.toLocaleString('ru-RU')} ₽`" class="stat-value" />
-              </StackLayout>
-              <StackLayout class="stat-card">
-                <Label text="Потрачено" class="stat-label" />
-                <Label :text="`${totalExpenses.toLocaleString('ru-RU')} ₽`" class="stat-value" />
-              </StackLayout>
-            </GridLayout>
-
-            <GridLayout columns="*, *" class="budget-stats">
-              <StackLayout class="stat-card">
-                <Label text="Осталось" class="stat-label" />
-                <Label :text="`${remainingBudget.toLocaleString('ru-RU')} ₽`"
-                      :class="remainingBudget >= 0 ? 'stat-value positive' : 'stat-value negative'" />
-              </StackLayout>
-              <StackLayout class="stat-card">
-                <Label text="Использовано" class="stat-label" />
-                <Label :text="`${usagePercentage.toFixed(0)}%`" class="stat-value" />
-              </StackLayout>
-            </GridLayout>
-
-            <Progress :value="usagePercentage" :maxValue="100" class="budget-progress" />
+            
 
             <!-- Бюджет по категориям -->
             <StackLayout class="categories-budget">
@@ -203,7 +174,7 @@ onMounted(() => {
   trip.value = tripStore.getTripById(props.tripId)
 })
 
-// Основная информация
+// Заголовок
 const formattedDates = computed(() => {
   if (!trip.value) return ''
   const start = new Date(trip.value.startDate).toLocaleDateString('ru-RU')
@@ -211,29 +182,15 @@ const formattedDates = computed(() => {
   return `${start} — ${end}`
 })
 
-const formattedBudget = computed(() => {
-  if (!trip.value) return ''
-  return `${trip.value.budget.toLocaleString('ru-RU')} ₽`
-})
-
+// Участники
 const participantsCount = computed(() => {
   if (!trip.value) return 0
   return tripMemberStore.getTripMembersByTripId(trip.value.id).length
 })
 
-// Бюджет
+// Расходы
 const totalBudget = computed(() => trip.value?.budget || 0)
-const totalExpenses = computed(() => {
-  return expenseStore.getTotalExpensesByTripId(props.tripId)
-})
 
-const remainingBudget = computed(() => {
-  return totalBudget.value - totalExpenses.value
-})
-
-const usagePercentage = computed(() => {
-  return totalBudget.value === 0 ? 0 : (totalExpenses.value / totalBudget.value) * 100
-})
 
 // Категории
 const allCategories = computed(() => expenseTypeStore.getAllExpenseTypes())
@@ -353,52 +310,11 @@ const openExpenseDetails = (expenseId: number) => {
 </script>
 
 <style scoped>
+
+/* Прочее */
+
 .p-4 {
   padding: 0;
-}
-
-.trip-title {
-  font-family: "Inter", "Inter-Regular", "Inter-Bold";
-  font-size: 20;
-  font-weight: bold;
-  color: #313132;
-}
-
-.trip-title2 {
-  font-family: "Inter", "Inter-Regular", "Inter-Bold";
-  font-size: 36;
-  font-weight: bold;
-  color: #313132;
-}
-
-.trip-title3 {
-  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
-  font-size: 20;
-  color: #6F7071;
-}
-
-.particapantsmain {
-  margin-top: 32;
-  padding-bottom: 20;
-  padding-top: 20;
-  padding-left: 24;
-  background-color: white;
-  border-radius: 24;
-  elevation: 8;
-  width: 354;
-  height: 130;
-  shadow-radius: 8; /* iOS */
-  shadow-color: #000000;
-  shadow-opacity: 0.9;
-  shadow-offset-width: 0;
-  shadow-offset-height: 4;
-}
-
-.bigtext{
-  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
-  font-size: 20;
-  font-weight: bold;
-  color: 313132;
 }
 
 .hidden {
@@ -406,90 +322,54 @@ const openExpenseDetails = (expenseId: number) => {
   visibility: collapse;
 }
 
-.page-container {
-  background-color: #ffffff;
-}
+/* Текст */
 
-/* Кастомный хедер 30dp высотой */
-.custom-header {
-  background-color: transparent;
-  padding-left: 24;
-  padding-right: 24;
-  margin-top: 24; /* Отступ сверху 24dp (24px в дизайне) */
-}
-
-/* Кнопка 30x30 */
-.icon-button {
-  background-color: transparent;
-  border-width: 0;
-  padding: 0;
-  margin: 0;
-  border-radius: 0;
-}
-
-/* SVG изображение внутри кнопки */
-.icon-image {
-  width: 20;
-  height: 20;
-}
-
-
-
-/* Блоки */
-.info-block {
-  margin-bottom: 8;
-}
-
-/* Заголовки */
 .title {
-  font-size: 24;
+  font-family: "Inter", "Inter-Regular", "Inter-Bold";
+  font-size: 20;
   font-weight: bold;
-  margin-bottom: 8;
+  color: #313132;
 }
 
-.subtitle {
-  font-size: 18;
-  color: #6b7280;
-  margin-bottom: 20;
+.title2 {
+  font-family: "Inter", "Inter-Regular", "Inter-Bold";
+  font-size: 36;
+  font-weight: bold;
+  color: #313132;
 }
 
-.info-row {
-  margin-bottom: 12;
-  padding: 4 0;
+.title3 {
+  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
+  font-size: 20;
+  color: #6F7071;
 }
 
-.icon {
-  font-size: 18;
-  margin-right: 12;
-  width: 32;
-}
+/* Секция участники */
 
-.description {
-  font-size: 16;
-  color: #374151;
-  margin-top: 20;
-  margin-bottom: 8;
-  padding: 12;
-  background-color: #f9fafb;
-  border-radius: 8;
-}
-
-/* Разделитель */
-.separator {
-  height: 1;
-  background-color: #e5e7eb;
-  margin: 16 0;
-}
-
-/* Бюджетный виджет */
-.budget-widget {
+.participants_section {
+  margin-top: 32;
+  padding-bottom: 20;
+  padding-top: 20;
+  padding-left: 24;
   background-color: white;
-  border-radius: 16;
-  padding: 16;
-  margin-bottom: 16;
-  border-width: 1;
-  border-color: #e5e7eb;
+  border-radius: 24;
+  width: 354;
+  height: 130;
 }
+
+/* Секция расходы */
+
+.expenses_section {
+  margin-top: 32;
+  padding: 24;
+  background-color: white;
+  border-radius: 24;
+  width: 354;
+  height: 650;
+}
+
+
+
 
 .budget-header {
   margin-bottom: 16;
@@ -514,43 +394,6 @@ const openExpenseDetails = (expenseId: number) => {
   color: #1f2937;
 }
 
-.budget-stats {
-  margin-bottom: 16;
-}
-
-.stat-card {
-  padding: 12;
-  background-color: #f9fafb;
-  border-radius: 12;
-  margin: 4;
-}
-
-.stat-label {
-  font-size: 12;
-  color: #6b7280;
-  margin-bottom: 4;
-}
-
-.stat-value {
-  font-size: 18;
-  font-weight: bold;
-  color: #1f2937;
-}
-
-.stat-value.positive {
-  color: #10b981;
-}
-
-.stat-value.negative {
-  color: #ef4444;
-}
-
-.budget-progress {
-  margin-top: 8;
-  height: 8;
-  border-radius: 4;
-  background-color: #e5e7eb;
-}
 
 /* Бюджет по категориям */
 .categories-budget {
