@@ -85,17 +85,62 @@
             </StackLayout>
           </StackLayout>
 
-          <StackLayout class="btn-hist" marginTop="18" verticalAlignment="middle">
+          <StackLayout class="btn-hist" marginTop="18" verticalAlignment="middle" @tap="openHistoryModal">
             <label class="title" text="История расходов" horizontalAlignment="center" color="#FFDD2D"/>
           </StackLayout>
 
-          <StackLayout class="btn-exp" marginTop="24" marginBottom="36" verticalAlignment="middle">
+          <StackLayout class="btn-exp" marginTop="24" marginBottom="36" verticalAlignment="middle" @tap="showAddExpense">
             <label class="title" text="Добавить расход" horizontalAlignment="center" color="#313132"/>
           </StackLayout>
 
         </StackLayout>
       </ScrollView>
 
+      <GridLayout v-if="showHistoryModal" class="modal-root" row="0" rowSpan="2">
+      <GridLayout rows="auto, *" class="history-modal" @tap="onHistoryModalTap">
+        <GridLayout columns="*, auto" class="history-header">
+          <Label col="0" text="История расходов" class="history-title" />
+          <Label col="1" text="✕" class="history-close" @tap="closeHistoryModal" />
+        </GridLayout>
+
+        <ScrollView row="1">
+          <StackLayout class="history-list">
+            <StackLayout
+              v-for="item in expenseHistoryItems"
+              :key="item.id"
+              class="history-item"
+            >
+              <GridLayout columns="*, auto">
+                <Label col="0" :text="item.description" class="history-item-title" />
+                <Label col="1" :text="`${formatMoney(item.amount)} ₽`" class="history-item-amount" />
+              </GridLayout>
+
+              <Label :text="item.date" class="history-item-date" />
+              <Label :text="`Плательщик: ${item.payerName}`" class="history-item-payer" />
+
+              <StackLayout v-if="item.allocations.length > 0" class="history-allocations">
+                <Label text="Оплачено за:" class="history-alloc-title" />
+                <GridLayout
+                  v-for="alloc in item.allocations"
+                  :key="`${item.id}-${alloc.userId}`"
+                  columns="*, auto"
+                  class="history-alloc-row"
+                >
+                  <Label col="0" :text="alloc.userName" class="history-alloc-user" />
+                  <Label col="1" :text="`${formatMoney(alloc.amount)} ₽`" class="history-alloc-amount" />
+                </GridLayout>
+              </StackLayout>
+            </StackLayout>
+
+            <Label
+              v-if="expenseHistoryItems.length === 0"
+              text="Расходов пока нет"
+              class="history-empty"
+            />
+          </StackLayout>
+        </ScrollView>
+      </GridLayout>
+    </GridLayout>
     </GridLayout>
   </Page>
 </template>
@@ -106,16 +151,9 @@ import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
-import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
 import type { Trip } from '~/models/trip'
-import type { ExpenseType } from '~/models/type_of_expense'
-import ExpenseCard from '~/components/UI/ExpenseCard.vue'
 import AddExpenseDialog from './AddExpenseDialog.vue'
-import EditCategoryBudgetDialog from '~/components/EditCategoryBudgetDialog.vue'
-import ExpenseDetails from './ExpenseDetails.vue'
-import DebtsWidget from '~/components/DebtsWidget.vue'
-import { Button, GridLayout, Label, StackLayout, confirm } from '@nativescript/core'
 
 const props = defineProps<{
   tripId: number
@@ -125,10 +163,10 @@ const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
 const expenseTypeStore = useExpenseTypeStore()
-const budgetCategoryStore = useTripBudgetCategoryStore()
 const userStore = useUserStore()
 
 const trip = ref<Trip | null>(null)
+const showHistoryModal = ref(false)
 
 onMounted(() => {
   trip.value = tripStore.getTripById(props.tripId)
@@ -186,6 +224,64 @@ const unallocatedFunds = computed(() => {
   const remaining = Number(totalBudget.value) - totalExpenses.value
   return remaining > 0 ? remaining : 0
 })
+
+const getUserDisplayName = (userId: number) => {
+  const user = userStore.getUserById(userId)
+  if (!user) return `Пользователь ${userId}`
+  return `${user.first_name} ${user.last_name}`
+}
+
+const formatExpenseDate = (value: string) =>
+  new Date(value).toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+
+const expenseHistoryItems = computed(() => {
+  return expenseStore
+    .getExpensesByTripId(props.tripId)
+    .slice()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map(expense => {
+      const allocations = expenseStore
+        .getAllocationsByExpenseId(expense.id)
+        .filter(allocation => allocation.user_id !== expense.user_id_pay && allocation.amount > 0)
+        .map(allocation => ({
+          userId: allocation.user_id,
+          userName: getUserDisplayName(allocation.user_id),
+          amount: allocation.amount
+        }))
+
+      return {
+        id: expense.id,
+        date: formatExpenseDate(expense.date),
+        payerName: getUserDisplayName(expense.user_id_pay),
+        description: expense.description?.trim() || 'Без описания',
+        amount: expense.amount,
+        allocations
+      }
+    })
+})
+
+const openHistoryModal = () => {
+  showHistoryModal.value = true
+}
+
+const closeHistoryModal = () => {
+  showHistoryModal.value = false
+}
+
+const onHistoryModalTap = () => {
+}
+
+const showAddExpense = () => {
+  $navigateTo(AddExpenseDialog, {
+    props: {
+      tripId: props.tripId
+    }
+  })
+}
 
 </script>
 
@@ -283,6 +379,112 @@ const unallocatedFunds = computed(() => {
   height: 60;
   border-radius: 14;
   background-color: #FFDD2D;
+}
+
+.modal-root {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  
+}
+
+.history-modal {
+  vertical-align: middle;
+  horizontal-align: center;
+  width: 354;
+  margin-top: 70;
+  margin-bottom: 24;
+  background-color: #FFFFFF;
+  border-radius: 16;
+  padding: 16;
+}
+
+.history-header {
+  padding-bottom: 10;
+  border-bottom-width: 1;
+  border-bottom-color: #E5E7EB;
+}
+
+.history-title {
+  font-size: 20;
+  font-weight: 700;
+  color: #111827;
+}
+
+.history-close {
+  font-size: 24;
+  color: #6B7280;
+  padding-left: 12;
+}
+
+.history-list {
+  padding-top: 8;
+}
+
+.history-item {
+  border-width: 1;
+  border-color: #E5E7EB;
+  border-radius: 12;
+  padding: 12;
+  margin-bottom: 10;
+}
+
+.history-item-title {
+  font-size: 16;
+  font-weight: 600;
+  color: #111827;
+}
+
+.history-item-amount {
+  font-size: 16;
+  font-weight: 700;
+  color: #111827;
+}
+
+.history-item-date {
+  margin-top: 6;
+  font-size: 13;
+  color: #6B7280;
+}
+
+.history-item-payer {
+  margin-top: 2;
+  font-size: 13;
+  color: #374151;
+}
+
+.history-allocations {
+  margin-top: 8;
+  padding-top: 8;
+  border-top-width: 1;
+  border-top-color: #F3F4F6;
+}
+
+.history-alloc-title {
+  font-size: 12;
+  color: #6B7280;
+  margin-bottom: 4;
+}
+
+.history-alloc-row {
+  padding-top: 3;
+  padding-bottom: 3;
+}
+
+.history-alloc-user {
+  font-size: 13;
+  color: #374151;
+}
+
+.history-alloc-amount {
+  font-size: 13;
+  color: #111827;
+}
+
+.history-empty {
+  text-align: center;
+  color: #9CA3AF;
+  margin-top: 20;
 }
 
 </style>
