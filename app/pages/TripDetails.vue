@@ -141,19 +141,73 @@
         </ScrollView>
       </GridLayout>
     </GridLayout>
+
+    <GridLayout v-if="showAddExpenseModal" class="modal-root" row="0" rowSpan="2">
+      <GridLayout rows="auto, *" class="history-modal" @tap="onHistoryModalTap">
+        <GridLayout columns="*, auto" class="history-header">
+          <Label col="0" text="Добавить расход" class="history-title" />
+          <Label col="1" text="✕" class="history-close" @tap="closeAddExpenseModal" />
+        </GridLayout>
+
+        <ScrollView row="1">
+          <StackLayout class="history-list">
+            <TextField v-model="newExpenseDescription" hint="Описание расхода" class="input" />
+            <TextField v-model="newExpenseAmount" hint="Сумма" keyboardType="number" class="input" />
+
+            <Label text="Категория" class="history-alloc-title" />
+            <DropDown
+              :items="categoryNames"
+              :selectedIndex="selectedCategoryIndex"
+              @selectedIndexChanged="onCategoryChange"
+              class="dropdown"
+            />
+
+            <Label text="Кто оплатил" class="history-alloc-title" />
+            <DropDown
+              :items="payerNames"
+              :selectedIndex="selectedPayerIndex"
+              @selectedIndexChanged="onPayerChange"
+              class="dropdown"
+            />
+
+            <Label text="За кого (необязательно)" class="history-alloc-title" />
+            <StackLayout class="participants-wrapper">
+              <GridLayout
+                v-for="participant in participants"
+                :key="participant.member_id"
+                columns="auto, *"
+                class="participant-row"
+                @tap="toggleParticipant(participant.member_id)"
+              >
+                <Label
+                  col="0"
+                  :text="selectedParticipants[participant.member_id] ? '☑️' : '⬜'"
+                  class="checkbox"
+                />
+                <Label col="1" :text="getUserName(participant.member_id)" class="participant-name" />
+              </GridLayout>
+            </StackLayout>
+
+            <Label v-if="addExpenseError" :text="addExpenseError" class="error" />
+
+            <Button text="Добавить расход" class="btn-primary" @tap="submitNewExpense" />
+          </StackLayout>
+        </ScrollView>
+      </GridLayout>
+    </GridLayout>
     </GridLayout>
   </Page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, $navigateBack, $navigateTo } from 'nativescript-vue'
+import { ref, computed, onMounted, $navigateBack } from 'nativescript-vue'
 import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
 import { useUserStore } from '~/stores/userStore'
 import type { Trip } from '~/models/trip'
-import AddExpenseDialog from './AddExpenseDialog.vue'
+import type { SelectedIndexChangedEventData } from 'nativescript-drop-down'
 
 const props = defineProps<{
   tripId: number
@@ -167,6 +221,13 @@ const userStore = useUserStore()
 
 const trip = ref<Trip | null>(null)
 const showHistoryModal = ref(false)
+const showAddExpenseModal = ref(false)
+const newExpenseDescription = ref('')
+const newExpenseAmount = ref('')
+const selectedCategoryId = ref<number | null>(null)
+const selectedPayerId = ref<number | null>(null)
+const selectedParticipants = ref<Record<number, boolean>>({})
+const addExpenseError = ref('')
 
 onMounted(() => {
   trip.value = tripStore.getTripById(props.tripId)
@@ -225,7 +286,29 @@ const unallocatedFunds = computed(() => {
   return remaining > 0 ? remaining : 0
 })
 
+const participants = computed(() => tripMemberStore.getTripMembersByTripId(props.tripId))
+const categoryNames = computed(() => allCategories.value.map(c => c.name))
+const payerNames = computed(() => participants.value.map(p => getUserName(p.member_id)))
+
+const selectedCategoryIndex = computed(() => {
+  if (!selectedCategoryId.value) return 0
+  const index = allCategories.value.findIndex(c => c.id === selectedCategoryId.value)
+  return index >= 0 ? index : 0
+})
+
+const selectedPayerIndex = computed(() => {
+  if (!selectedPayerId.value) return 0
+  const index = participants.value.findIndex(p => p.member_id === selectedPayerId.value)
+  return index >= 0 ? index : 0
+})
+
 const getUserDisplayName = (userId: number) => {
+  const user = userStore.getUserById(userId)
+  if (!user) return `Пользователь ${userId}`
+  return `${user.first_name} ${user.last_name}`
+}
+
+const getUserName = (userId: number) => {
   const user = userStore.getUserById(userId)
   if (!user) return `Пользователь ${userId}`
   return `${user.first_name} ${user.last_name}`
@@ -276,11 +359,86 @@ const onHistoryModalTap = () => {
 }
 
 const showAddExpense = () => {
-  $navigateTo(AddExpenseDialog, {
-    props: {
-      tripId: props.tripId
-    }
+  if (!selectedCategoryId.value && allCategories.value.length > 0) {
+    selectedCategoryId.value = allCategories.value[0].id
+  }
+  if (!selectedPayerId.value && participants.value.length > 0) {
+    selectedPayerId.value = participants.value[0].member_id
+  }
+  addExpenseError.value = ''
+  showAddExpenseModal.value = true
+}
+
+const closeAddExpenseModal = () => {
+  showAddExpenseModal.value = false
+}
+
+const onCategoryChange = (args: SelectedIndexChangedEventData) => {
+  const index = args.newIndex
+  if (index >= 0 && allCategories.value[index]) {
+    selectedCategoryId.value = allCategories.value[index].id
+  }
+}
+
+const onPayerChange = (args: SelectedIndexChangedEventData) => {
+  const index = args.newIndex
+  if (index >= 0 && participants.value[index]) {
+    selectedPayerId.value = participants.value[index].member_id
+  }
+}
+
+const toggleParticipant = (userId: number) => {
+  selectedParticipants.value[userId] = !selectedParticipants.value[userId]
+}
+
+const submitNewExpense = () => {
+  addExpenseError.value = ''
+
+  if (!newExpenseDescription.value.trim() || !newExpenseAmount.value.trim() || !selectedCategoryId.value || !selectedPayerId.value) {
+    addExpenseError.value = 'Заполните описание, сумму, категорию и плательщика'
+    return
+  }
+
+  const amount = Number(newExpenseAmount.value)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    addExpenseError.value = 'Сумма должна быть больше 0'
+    return
+  }
+
+  if (amount > unallocatedFunds.value) {
+    addExpenseError.value = `Сумма не должна превышать остаток ${formatMoney(unallocatedFunds.value)} ₽`
+    return
+  }
+
+  const expenseId = expenseStore.addExpense({
+    trip_id: props.tripId,
+    description: newExpenseDescription.value.trim(),
+    amount,
+    type_of_expense: selectedCategoryId.value,
+    user_id_pay: selectedPayerId.value,
+    date: new Date().toISOString().split('T')[0],
+    currency_id: 1
   })
+
+  const selectedUserIds = Object.entries(selectedParticipants.value)
+    .filter(([, selected]) => selected)
+    .map(([id]) => Number(id))
+
+  if (selectedUserIds.length > 0) {
+    const amountPerPerson = amount / selectedUserIds.length
+    selectedUserIds.forEach(userId => {
+      expenseStore.addExpenseAllocation({
+        expense_id: expenseId,
+        user_id: userId,
+        amount: amountPerPerson
+      })
+    })
+  }
+
+  newExpenseDescription.value = ''
+  newExpenseAmount.value = ''
+  selectedParticipants.value = {}
+  closeAddExpenseModal()
 }
 
 </script>
@@ -485,6 +643,57 @@ const showAddExpense = () => {
   text-align: center;
   color: #9CA3AF;
   margin-top: 20;
+}
+
+.input {
+  border-width: 1;
+  border-color: #d1d5db;
+  border-radius: 8;
+  padding: 12;
+  margin-bottom: 12;
+  font-size: 14;
+}
+
+.dropdown {
+  border-width: 1;
+  border-color: #d1d5db;
+  border-radius: 8;
+  margin-bottom: 12;
+  height: 44;
+  padding: 4 8;
+  background-color: white;
+}
+
+.participants-wrapper {
+  margin-top: 4;
+  border-width: 1;
+  border-color: #f3f4f6;
+  border-radius: 8;
+  padding: 4;
+  margin-bottom: 12;
+}
+
+.participant-row {
+  padding: 10;
+  border-bottom-width: 1;
+  border-bottom-color: #f3f4f6;
+}
+
+.checkbox {
+  font-size: 18;
+  margin-right: 10;
+  width: 28;
+}
+
+.participant-name {
+  font-size: 14;
+  color: #374151;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 12;
+  margin-bottom: 10;
 }
 
 </style>
