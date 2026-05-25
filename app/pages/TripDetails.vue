@@ -35,10 +35,20 @@
             <Label class="title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
           </StackLayout>
 
-          <GridLayout class="participants_section" columns="auto, auto, auto" rows="auto">
-            <StackLayout col="0" marginTop="4">
+          <GridLayout class="participants_section" columns="auto, auto" rows="auto">
+            <StackLayout col="0" marginTop="4" marginRight="24">
                <Label class="title" text="Участники"/>
                <Label class="title3" :text="`${participantsCount} человек`" marginTop="8" />
+            </StackLayout>
+
+            <StackLayout orientation="horizontal" col="1">
+              <Image
+                v-for="participant in particapantsAvatar"
+                :key="participant.memberId"
+                :src="participant.avatar"
+                class="particapants-image"
+                stretch="aspectFill"
+              />
             </StackLayout>
           </GridLayout>
 
@@ -143,6 +153,21 @@ const participantsCount = computed(() => {
   return tripMemberStore.getTripMembersByTripId(trip.value.id).length
 })
 
+const particapantsIDs = computed(() => {
+  if (!trip.value) return []
+  return tripMemberStore.getTripMembersByTripId(trip.value.id)
+})
+
+const particapantsAvatar = computed(() => {
+  return particapantsIDs.value.map(participant => {
+    const user = userStore.getUserById(participant.member_id)
+    return {
+      memberId: participant.member_id,
+      avatar: user?.avatar || `https://i.pravatar.cc/150?u=member-${participant.member_id}`
+    }
+  })
+})
+
 // Расходы
 const totalBudget = computed(() => trip.value?.budget || 0)
 const totalExpenses = computed(() => expenseStore.getTotalExpensesByTripId(props.tripId))
@@ -216,6 +241,13 @@ const unallocatedFunds = computed(() => {
   border-radius: 24;
   width: 354;
   height: 130;
+}
+
+.particapants-image {
+  margin-right: 12;
+  width: 90;
+  height: 90;
+  border-radius: 24;
 }
 
 /* Секция расходы */
