@@ -2,33 +2,26 @@
   <Page>
     <ActionBar class="hidden" />
     <GridLayout rows="auto, *">
-
       <GridLayout
-      columns="auto, *"
-      height="30"
-      marginTop="24"
-      paddingLeft="24"
-      paddingRight="24"
-      row="0"
+        columns="auto, *"
+        height="30"
+        marginTop="24"
+        paddingLeft="24"
+        paddingRight="24"
+        row="0"
       >
-        <GridLayout
-          col="0"
-          width="30"
-          height="30"
-          @tap="$navigateBack"
-        >
-        <Image
-          src="~/assets/icons/Arrow_left.png"
-          width="30"
-          height="30"
-          stretch="aspectFit"
-        />
+        <GridLayout col="0" width="30" height="30" @tap="$navigateBack">
+          <Image
+            src="~/assets/icons/Arrow_left.png"
+            width="30"
+            height="30"
+            stretch="aspectFit"
+          />
         </GridLayout>
       </GridLayout>
 
       <ScrollView row="1">
         <StackLayout class="profile-root">
-
           <GridLayout columns="120, *" class="profile-top">
             <Image col="0" class="profile-avatar" :src="avatarSrc" stretch="aspectFill" />
             <StackLayout col="1" marginLeft="24" marginTop="16">
@@ -50,10 +43,13 @@
           </StackLayout>
 
           <StackLayout class="section section-last">
-            <Label class="section-label" text="Задолжность:" />
+            <Label class="section-label" text="Задолженность:" />
             <Label class="section-value" :text="`${formattedDebt} ₽`" />
           </StackLayout>
 
+          <StackLayout class="logout-btn" @tap="onLogoutTap">
+            <Label text="Выйти из аккаунта" class="logout-btn-text" />
+          </StackLayout>
         </StackLayout>
       </ScrollView>
     </GridLayout>
@@ -62,6 +58,7 @@
 
 <script setup lang="ts">
 import { computed } from 'nativescript-vue'
+import * as dialogs from '@nativescript/core/ui/dialogs'
 import { useUserStore } from '~/stores/userStore'
 
 const props = defineProps<{
@@ -92,9 +89,22 @@ const formattedDebt = computed(() => {
   const safe = Number.isFinite(props.debtAmount) ? props.debtAmount : 0
   return Math.round(safe).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 })
+
+const onLogoutTap = async () => {
+  const confirmed = await dialogs.confirm({
+    title: 'Выход',
+    message: 'Выйти из аккаунта?',
+    okButtonText: 'Да',
+    cancelButtonText: 'Нет'
+  })
+
+  if (!confirmed) return
+  userStore.logout()
+}
 </script>
 
 <style scoped>
+
 .hidden {
   height: 0;
   visibility: collapse;
@@ -155,5 +165,22 @@ const formattedDebt = computed(() => {
   margin-top: 8;
   font-size: 16;
   color: #ffcc00;
+}
+
+.logout-btn {
+  margin-top: 24;
+  margin-bottom: 28;
+  height: 52;
+  border-radius: 14;
+  background-color: #313132;
+  vertical-align: middle;
+}
+
+.logout-btn-text {
+  color: #ffffff;
+  font-size: 16;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
 }
 </style>

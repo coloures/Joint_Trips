@@ -1,6 +1,6 @@
 <template>
   <Page class="login-page">
-    <ActionBar title="Вход в аккаунт" backgroundColor="#3b82f6" color="white" />
+    <ActionBar class="hidden" />
 
     <ScrollView>
       <StackLayout class="login-content">
@@ -75,6 +75,12 @@ const attemptLogin = async () => {
 </script>
 
 <style scoped>
+
+.hidden {
+  height: 0;
+  visibility: collapse;
+}
+
 .login-page {
   background-color: #f3f4f8;
 }
@@ -85,6 +91,7 @@ const attemptLogin = async () => {
 }
 
 .login-title {
+  margin-top: 164;
   font-size: 24;
   font-weight: bold;
   color: #111827;
@@ -117,11 +124,13 @@ const attemptLogin = async () => {
 
 .btn-login {
   margin-top: 16;
-  background-color: #3b82f6;
-  color: white;
-  border-radius: 10;
-  padding: 12;
-  font-weight: 600;
+  background-color: #FFDD2D;
+  color: 313132;
+  border-radius: 14;
+  padding-top: 16;
+  padding-bottom: 16;
+  font-size: 20;
+  font-weight: bold;
 }
 
 .error {
