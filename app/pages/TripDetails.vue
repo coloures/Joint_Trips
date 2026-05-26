@@ -448,7 +448,7 @@ const submitNewExpense = () => {
 /* Прочее */
 
 .p-4 {
-  padding: 0;
+  margin: 0;
 }
 
 .hidden {
