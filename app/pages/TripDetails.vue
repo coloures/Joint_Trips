@@ -2,7 +2,7 @@
   <Page>
     <ActionBar class="hidden"/>
     <GridLayout rows="auto, *">
-      
+
       <GridLayout
       columns="auto, *"
       height="30"
@@ -201,7 +201,9 @@
 
             <Label v-if="addExpenseError" :text="addExpenseError" class="error" />
 
-            <Button text="Добавить расход" class="btn-primary" @tap="submitNewExpense" />
+            <StackLayout class="btn-primary" marginTop="40" marginBottom="40" verticalAlignment="middle" @tap="submitNewExpense">
+              <label class="title" text="Добавить расход" horizontalAlignment="center" color="#313132"/>
+            </StackLayout>
           </StackLayout>
         </ScrollView>
       </GridLayout>
@@ -601,7 +603,7 @@ const submitNewExpense = async () => {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.7);
-  
+
 }
 
 .history-modal {
@@ -718,7 +720,7 @@ const submitNewExpense = async () => {
   border-radius: 8;
   margin-bottom: 12;
   height: 44;
-  padding: 4 8;
+  padding: 8 8 0 8;
   background-color: white;
 }
 
@@ -752,6 +754,13 @@ const submitNewExpense = async () => {
   color: #ef4444;
   font-size: 12;
   margin-bottom: 10;
+}
+
+.btn-primary {
+  width: 296;
+  height: 60;
+  border-radius: 14;
+  background-color: #FFDD2D;
 }
 
 </style>

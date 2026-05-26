@@ -1,54 +1,76 @@
 <template>
   <Page>
-    <ActionBar title="Мои долги" backgroundColor="#3b82f6" color="white">
-      <NavigationButton text="Назад" android.systemIcon="ic_menu_back" @tap="$navigateBack" />
-    </ActionBar>
+    <ActionBar class="hidden"/>
+    <GridLayout rows="auto, *">
 
-    <ScrollView>
-      <StackLayout class="page">
-        <StackLayout class="summary-card">
-          <Label text="К оплате" class="summary-label" />
-          <Label :text="formattedTotalDebt" class="summary-amount" />
-          <Label
-            :text="debtItems.length ? `Найдено долгов: ${debtItems.length}` : 'Сейчас у вас нет долгов'"
-            class="summary-caption"
-          />
-        </StackLayout>
+      <GridLayout
+      columns="auto, *"
+      height="30"
+      marginTop="24"
+      paddingLeft="24"
+      paddingRight="24"
+      row="0"
+      >
+        <GridLayout
+          col="0"
+          width="30"
+          height="30"
+          @tap="$navigateBack"
+        >
+        <Image
+          src="~/assets/icons/Arrow_left.png"
+          width="30"
+          height="30"
+          stretch="aspectFit"
+        />
+        </GridLayout>
+      </GridLayout>
 
-        <StackLayout v-if="debtItems.length">
-          <StackLayout
-            v-for="item in debtItems"
-            :key="`${item.tripId}-${item.expenseId}-${item.creditorId}`"
-            class="debt-card"
-          >
-            <GridLayout columns="auto, *, auto" class="debt-card-header">
-              <Label col="0" :text="item.tripEmoji" class="trip-emoji" />
-              <StackLayout col="1">
-                <Label :text="item.tripTitle" class="trip-title" />
-                <Label :text="item.formattedDate" class="trip-date" />
+      <ScrollView row="1">
+        <StackLayout class="p-4">
+
+          <StackLayout class="summary-card">
+            <Label text="К оплате" class="summary-label" />
+            <Label :text="formattedTotalDebt" class="summary-amount" />
+          </StackLayout>
+
+          <StackLayout v-if="debtItems.length">
+            <StackLayout
+              v-for="item in debtItems"
+              :key="`${item.tripId}-${item.expenseId}-${item.creditorId}`"
+              class="debt-card"
+            >
+              <GridLayout columns="auto, *, auto" class="debt-card-header">
+                <Label col="0" :text="item.tripEmoji" class="trip-emoji" />
+                <StackLayout col="1">
+                  <Label :text="item.tripTitle" class="trip-title" />
+                  <Label :text="item.formattedDate" class="trip-date" />
+                </StackLayout>
+                <Label col="2" :text="item.formattedAmount" class="debt-amount" />
+              </GridLayout>
+
+              <StackLayout class="info-block">
+                <Label :text="`Кому: ${item.creditorName}`" class="info-text" />
+                <Label :text="`За что: ${item.reason}`" class="info-text" textWrap="true" />
+                <Label :text="`Категория: ${item.categoryName}`" class="info-subtext" />
               </StackLayout>
-              <Label col="2" :text="item.formattedAmount" class="debt-amount" />
-            </GridLayout>
-
-            <StackLayout class="info-block">
-              <Label :text="`Кому: ${item.creditorName}`" class="info-text" />
-              <Label :text="`За что: ${item.reason}`" class="info-text" textWrap="true" />
-              <Label :text="`Категория: ${item.categoryName}`" class="info-subtext" />
             </StackLayout>
           </StackLayout>
-        </StackLayout>
 
-        <StackLayout v-else class="empty-card">
-          <Label text="🎉" class="empty-icon" />
-          <Label text="Долгов нет" class="empty-title" />
-          <Label
-            text="Когда появятся расходы, где вы должны другому участнику, они будут показаны здесь."
-            class="empty-subtitle"
-            textWrap="true"
-          />
+          <StackLayout v-else class="empty-card">
+            <Label text="🎉" class="empty-icon" />
+            <Label text="Долгов нет" class="empty-title" />
+            <Label
+              text="Когда появятся расходы, где вы должны другому участнику, они будут показаны здесь."
+              class="empty-subtitle"
+              textWrap="true"
+            />
+          </StackLayout>
+
         </StackLayout>
-      </StackLayout>
-    </ScrollView>
+      </ScrollView>
+
+    </GridLayout>
   </Page>
 </template>
 
@@ -147,42 +169,46 @@ const formattedTotalDebt = computed(() => {
 </script>
 
 <style scoped>
-.page {
-  padding: 16;
+
+.p-4 {
+  margin: 0;
+}
+
+.hidden {
+  height: 0;
+  visibility: collapse;
 }
 
 .summary-card,
 .debt-card,
 .empty-card {
+  width: 354;
   background-color: white;
-  border-radius: 16;
-  padding: 16;
+  border-radius: 24;
+  padding: 24;
   margin-bottom: 14;
-  border-width: 1;
-  border-color: #e5e7eb;
 }
 
 .summary-card {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
+  background-color: #FFF7CF;
 }
 
 .summary-label {
-  font-size: 14;
-  color: #2563eb;
+  font-size: 16;
+  color: #313132;
 }
 
 .summary-amount {
   font-size: 30;
-  font-weight: 700;
-  color: #1d4ed8;
+  font-weight: bold;
+  color: #313132;
   margin-top: 4;
 }
 
 .summary-caption {
-  font-size: 13;
-  color: #6b7280;
-  margin-top: 6;
+  font-size: 16;
+  color: #FFDD2D;
+  margin-top: 8;
 }
 
 .debt-card-header {
@@ -210,7 +236,7 @@ const formattedTotalDebt = computed(() => {
 .debt-amount {
   font-size: 18;
   font-weight: 700;
-  color: #ef4444;
+  color: #313132;
   text-align: right;
 }
 

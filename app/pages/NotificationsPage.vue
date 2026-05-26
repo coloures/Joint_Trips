@@ -1,74 +1,98 @@
 <template>
   <Page>
-    <ActionBar title="Уведомления" backgroundColor="#3b82f6" color="white">
-      <NavigationButton text="Назад" android.systemIcon="ic_menu_back" @tap="$navigateBack" />
-    </ActionBar>
+    <ActionBar class="hidden"/>
+    <GridLayout rows="auto, *, auto">
 
-    <ScrollView>
-      <StackLayout class="page">
-        <StackLayout class="summary-card">
-          <Label text="Все уведомления" class="summary-label" />
-          <Label :text="summaryText" class="summary-amount" />
-          <Label :text="statusText" class="summary-caption" />
-        </StackLayout>
-
-        <Button 
-          text="🧹 Очистить прочитанные"
-          class="btn-clear"
-          @tap="onClearRead"
+      <GridLayout
+      columns="auto, *"
+      height="30"
+      marginTop="24"
+      paddingLeft="24"
+      paddingRight="24"
+      row="0"
+      >
+        <GridLayout
+          col="0"
+          width="30"
+          height="30"
+          @tap="$navigateBack"
+        >
+        <Image
+          src="~/assets/icons/Arrow_left.png"
+          width="30"
+          height="30"
+          stretch="aspectFit"
         />
+        </GridLayout>
+      </GridLayout>
 
-        <StackLayout v-if="notificationItems.length">
-          <StackLayout v-for="item in notificationItems" :key="item.id" class="notification-card">
-            <GridLayout columns="*, auto">
-              <StackLayout col="0" class="notification-content">
-                <Label :text="item.title" class="notification-title" />
-                <Label :text="item.message" class="notification-message" textWrap="true" />
-                <Label :text="item.meta" class="notification-meta" />
-              </StackLayout>
+      <ScrollView row="1">
+        <StackLayout class="p-4">
 
-              <StackLayout col="1" class="status-wrap">
-                <StackLayout
-                  class="status-dot"
-                  :class="item.isRead ? 'status-dot-read' : 'status-dot-unread'"
+          <StackLayout class="summary-card">
+            <Label text="Все уведомления" class="summary-label" />
+            <Label :text="summaryText" class="summary-amount" />
+            <Label :text="statusText" class="summary-caption" />
+          </StackLayout>
+
+          <StackLayout v-if="notificationItems.length">
+            <StackLayout v-for="item in notificationItems" :key="item.id" class="notification-card">
+              <GridLayout columns="*, auto">
+                <StackLayout col="0" class="notification-content">
+                  <Label :text="item.title" class="notification-title" />
+                  <Label :text="item.message" class="notification-message" textWrap="true" />
+                  <Label :text="item.meta" class="notification-meta" />
+                </StackLayout>
+
+                <StackLayout col="1" class="status-wrap">
+                  <StackLayout
+                    class="status-dot"
+                    :class="item.isRead ? 'status-dot-read' : 'status-dot-unread'"
+                  />
+                </StackLayout>
+              </GridLayout>
+
+              <GridLayout
+                v-if="item.canRespond"
+                columns="*, *"
+                class="invite-actions"
+              >
+                <Button
+                  col="0"
+                  text="Отклонить"
+                  class="btn-outline"
+                  :isEnabled="!isProcessingInvite"
+                  @tap="respondToInvite(item, 'decline')"
                 />
-              </StackLayout>
-            </GridLayout>
+                <Button
+                  col="1"
+                  text="Подтвердить"
+                  class="btn-primary"
+                  :isEnabled="!isProcessingInvite"
+                  @tap="respondToInvite(item, 'accept')"
+                />
+              </GridLayout>
+            </StackLayout>
+          </StackLayout>
 
-            <GridLayout
-              v-if="item.canRespond"
-              columns="*, *"
-              class="invite-actions"
-            >
-              <Button
-                col="0"
-                text="Отклонить"
-                class="btn-outline"
-                :isEnabled="!isProcessingInvite"
-                @tap="respondToInvite(item, 'decline')"
-              />
-              <Button
-                col="1"
-                text="Подтвердить"
-                class="btn-primary"
-                :isEnabled="!isProcessingInvite"
-                @tap="respondToInvite(item, 'accept')"
-              />
-            </GridLayout>
+          <StackLayout v-else class="empty-card">
+            <Label text="🔔" class="empty-icon" />
+            <Label text="Уведомлений пока нет" class="empty-title" />
+            <Label
+              text="Когда в поездках появятся новые события, они будут собраны здесь."
+              class="empty-subtitle"
+              textWrap="true"
+            />
           </StackLayout>
         </StackLayout>
+      </ScrollView>
 
-        <StackLayout v-else class="empty-card">
-          <Label text="🔔" class="empty-icon" />
-          <Label text="Уведомлений пока нет" class="empty-title" />
-          <Label
-            text="Когда в поездках появятся новые события, они будут собраны здесь."
-            class="empty-subtitle"
-            textWrap="true"
-          />
+      <GridLayout class="belly" row="2" height="140">
+        <StackLayout class="btn-clear" marginTop="40" marginBottom="40" verticalAlignment="middle" @tap="onClearRead">
+          <label class="title" text="Очистить уведомления" horizontalAlignment="center" color="#313132"/>
         </StackLayout>
-      </StackLayout>
-    </ScrollView>
+      </GridLayout>
+    </GridLayout>
   </Page>
 </template>
 
@@ -236,42 +260,54 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page {
-  padding: 16;
+.p-4 {
+  margin: 0;
+}
+
+.hidden {
+  height: 0;
+  visibility: collapse;
+}
+
+/* txt */
+
+.title {
+  font-family: "Inter", "Inter-Regular", "Inter-Bold";
+  font-size: 20;
+  font-weight: bold;
+  color: #313132;
 }
 
 .summary-card,
 .notification-card,
 .empty-card {
+  width: 354;
   background-color: white;
-  border-radius: 16;
-  padding: 16;
+  border-radius: 24;
+  padding: 24;
   margin-bottom: 14;
-  border-width: 1;
-  border-color: #e5e7eb;
 }
 
 .summary-card {
-  background-color: #eff6ff;
-  border-color: #bfdbfe;
+  background-color: #FFF7CF;
 }
 
 .summary-label {
-  font-size: 14;
-  color: #2563eb;
+  font-size: 16;
+  color: #313132;
 }
 
 .summary-amount {
-  font-size: 28;
-  font-weight: 700;
-  color: #1d4ed8;
+  font-size: 30;
+  font-weight: bold;
+  color: #313132;
   margin-top: 4;
 }
 
 .summary-caption {
-  font-size: 13;
-  color: #6b7280;
-  margin-top: 6;
+  font-size: 16;
+  color: #FFDD2D;
+  margin-top: 8;
 }
 
 .notification-content {
@@ -360,11 +396,17 @@ onMounted(async () => {
   margin-top: 8;
 }
 
-.btn-clear {
-  background-color: #e5e7eb;
-  color: #374151;
-  border-radius: 10;
-  padding: 10;
-  margin-bottom: 10;
+/* пузо */
+.belly {
+  border-top-width: 1;
+  border-top-color: #D3D3D3;
 }
+
+.btn-clear {
+  width: 354;
+  height: 60;
+  border-radius: 14;
+  background-color: #FFDD2D;
+}
+
 </style>

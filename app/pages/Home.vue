@@ -6,7 +6,7 @@
       <ScrollView row="0">
         <StackLayout class="p-4">
 
-          <StackLayout class="header" orientation="horizontal">
+          <StackLayout class="header" orientation="horizontal" @tap="onHeaderTap">
             <Image class="avatar" :src="currentUserAvatar" stretch="aspectFill" />
             <Label class="name" :text="currentUserName" marginLeft="16"/>
           </StackLayout>
@@ -38,10 +38,10 @@
               </StackLayout>
             </GridLayout>
           </StackLayout>
-          
+
         </StackLayout>
       </ScrollView>
-      
+
       <GridLayout class="belly" row="1" height="140">
         <StackLayout class="btn-trip-create" marginTop="40" marginBottom="40" verticalAlignment="middle" @tap="onCardAddingTrip">
           <label class="title" text="Создать поездку" horizontalAlignment="center" color="#313132"/>
@@ -68,6 +68,7 @@ import DebtsPage from './DebtsPage.vue'
 import NotificationsPage from './NotificationsPage.vue'
 import TripDetails from './TripDetails.vue'
 import AddTrip from './AddTrip.vue'
+import UserProfilePage from './UserProfilePage.vue'
 import { GridLayout, Image, Label, StackLayout } from '@nativescript/core'
 
 const tripStore = useTripStore()
@@ -196,7 +197,7 @@ const onCardTrip = (item) => {
     },
     transition: 'slide',
     curve: 'easeInOut',
-    duration: 300
+    duration: 500
   })
 }
 
@@ -204,7 +205,7 @@ const onCardAddingTrip = () => {
   $navigateTo(AddTrip, {
     transition: 'slide',
     curve: 'easeInOut',
-    duration: 300
+    duration: 500
   })
 }
 
@@ -227,6 +228,17 @@ const onCardNotification = () => {
     props: {
       userId: memberId.value
     }
+  })
+}
+
+const onHeaderTap = () => {
+  $navigateTo(UserProfilePage, {
+    props: {
+      debtAmount: debtAmount.value
+    },
+    transition: 'slideLeft',
+    curve: 'easeInOut',
+    duration: 300
   })
 }
 
@@ -347,4 +359,3 @@ const onLogout = async () => {
 }
 
 </style>
-
