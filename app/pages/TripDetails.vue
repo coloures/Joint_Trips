@@ -1,28 +1,28 @@
-<template>
+﻿<template>
   <Page>
-    <ActionBar class="hidden" />
+    <ActionBar class="hidden"/>
     <GridLayout rows="auto, *">
-
+      
       <GridLayout
       columns="auto, *"
       height="30"
       marginTop="24"
       paddingLeft="24"
       paddingRight="24"
+      row="0"
       >
         <GridLayout
           col="0"
           width="30"
           height="30"
           @tap="$navigateBack"
-          rippleColor="#ccc"
         >
-            <Image
-              src="~/assets/icons/Arrow_left.png"
-              width="30"
-              height="30"
-              stretch="aspectFit"
-            />
+        <Image
+          src="~/assets/icons/Arrow_left.png"
+          width="30"
+          height="30"
+          stretch="aspectFit"
+        />
         </GridLayout>
       </GridLayout>
 
@@ -41,16 +41,15 @@
 
           --Наименование и дата
           <StackLayout>
-            <Label class="trip-title" text="Поездка в" horizontalAlignment="center"/>
-            <Label class="trip-title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
-            <Label class="trip-title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
+            <Label class="title" text="Поездка в" horizontalAlignment="center"/>
+            <Label class="title2" :text="`${trip?.title} ${trip?.emoji}`" horizontalAlignment="center"/>
+            <Label class="title3" :text="formattedDates" horizontalAlignment="center" marginTop="16"/>
           </StackLayout>
 
-          --Список участников
-          <GridLayout class="particapantsmain" columns="auto, auto" rows="auto">
-            <StackLayout orientation="vertical" col="0" marginTop="4" marginRight="24">
-               <Label class="trip-title" text="Участники"/>
-               <Label class="trip-title3" :text="`${participantsCount} человек`" marginTop="8" />
+          <GridLayout class="participants_section" columns="auto, auto" rows="auto">
+            <StackLayout col="0" marginTop="4" marginRight="24">
+               <Label class="title" text="Участники"/>
+               <Label class="title3" :text="`${participantsCount} человек`" marginTop="8" />
             </StackLayout>
 
             <StackLayout orientation="horizontal" col="1">
@@ -59,101 +58,155 @@
                 :key="participant.memberId"
                 :src="participant.avatar"
                 class="particapants-image"
-                stretch="aspectFit"
-            />
-            </StackLayout>
-          </GridLayout>
-
-          --Расходы
-          <StackLayout class="expenses-section">
-            <Label text="Расходы" class="trip-title" />
-            <Label text="Общий бюджет на поездку" class="trip-title3" marginTop="8"/>
-            <Label :text="`${totalBudget} ${currencySymbol}`" class="trip-title3" />
-            
-            <StackLayout class="categories-budget">
-              <StackLayout
-                v-for="category in categoriesWithBudget"
-                :key="category.id"
-                class="category-budget-item"
-              >
-
-                <GridLayout columns="auto, *, auto">
-
-                  <Label :text="getCategoryEmoji(category.name)" col="0" class="category-emoji" />
-                  <Label :text="category.name" col="1" class="category-name" />
-                  <Label
-                    :text="categoryBudgetMap[category.id] ? `${categoryBudgetMap[category.id].toLocaleString('ru-RU')} ${currencySymbol}` : 'Не указан'"
-                    col="2"
-                    class="category-amount"
-                    :class="{ 'no-budget': !categoryBudgetMap[category.id] }"
-                  />
-
-                </GridLayout>
-
-
-                <Progress
-                  v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
-                  :value="getCategoryPercentage(category.id)"
-                  :maxValue="100"
-                  class="category-progress"
-                />
-                <Label
-                  v-if="categoryBudgetMap[category.id] && categorySpentMap[category.id]"
-                  :text="`Потрачено: ${categorySpentMap[category.id].toLocaleString('ru-RU')} ${currencySymbol}`"
-                  class="category-spent"
-                />
-              </StackLayout>
-            </StackLayout>
-          </StackLayout>
-
-
-
-
-
-          <StackLayout class="expenses-section">
-            <StackLayout class="section-header">
-              <Label text="📝 Последние расходы" class="section-title" />
-              <Button text="+ Добавить" class="add-expense-btn" @tap="showAddExpense" />
-            </StackLayout>
-
-            <StackLayout v-if="recentExpenses.length > 0" class="expenses-list">
-              <ExpenseCard
-                v-for="expense in recentExpenses"
-                :key="expense.id"
-                :expense="expense"
-                :currentUserId="currentUserId ?? undefined"
-                @tap="openExpenseDetails"
+                stretch="aspectFill"
               />
             </StackLayout>
+          </GridLayout>
 
-            <StackLayout v-else class="empty-expenses">
-              <Label text="💰" class="empty-icon" />
-              <Label text="Нет расходов" class="empty-text" />
-              <Button text="+ Добавить первый расход" class="btn-add" @tap="showAddExpense" />
+          <StackLayout class="expenses_section">
+            <Label class="title" text="Расходы"/>
+            <Label class="title3" text="Общие расходы на поездку" marginTop="16"/>
+            <StackLayout orientation="horizontal" marginTop="8">
+              <Label class="title3" :text="`${formatMoney(totalExpenses)} ₽`" color="#313132"/>
+              <Label class="title3" :text="` / ${formatMoney(totalBudget)} ₽`"/>
+            </StackLayout>
+
+            <StackLayout marginTop="32">
+              <GridLayout
+                class="category-row"
+                v-for="item in categorySpendList"
+                :key="item.id"
+                columns="auto, *, auto"
+                height="45"
+              >
+                <Label col="0" :text="item.emoji" marginRight="8" />
+                <Label col="1" class="title4" :text="item.name" />
+                <Label col="2" class="title4" :text="`${formatMoney(item.spent)} ₽`" />
+              </GridLayout>
+              <GridLayout
+                class="category-row"
+                columns="auto, *, auto"
+                height="45"
+                borderBottomWidth="0"
+              >
+                <Label col="0" text="💼" marginRight="8" />
+                <Label col="1" class="title4" text="Не распределено" />
+                <Label col="2" class="title4" :text="`${formatMoney(unallocatedFunds)} ₽`" />
+              </GridLayout>
             </StackLayout>
           </StackLayout>
 
-          <GridLayout columns="*, *" class="actions" rows="auto">
-            <Button col="0" text="✏️ Редактировать" class="btn-primary" @tap="onEdit" />
-            <Button col="1" text="🗑️ Удалить" class="btn-outline" @tap="onDelete" />
-          </GridLayout>
+          <StackLayout class="btn-hist" marginTop="18" verticalAlignment="middle" @tap="openHistoryModal">
+            <label class="title" text="История расходов" horizontalAlignment="center" color="#FFDD2D"/>
+          </StackLayout>
+
+          <StackLayout class="btn-exp" marginTop="24" marginBottom="36" verticalAlignment="middle" @tap="showAddExpense">
+            <label class="title" text="Добавить расход" horizontalAlignment="center" color="#313132"/>
+          </StackLayout>
 
         </StackLayout>
       </ScrollView>
 
+      <GridLayout v-if="showHistoryModal" class="modal-root" row="0" rowSpan="2">
+      <GridLayout rows="auto, *" class="history-modal" @tap="onHistoryModalTap">
+        <GridLayout columns="*, auto" class="history-header">
+          <Label col="0" text="История расходов" class="history-title" />
+          <Label col="1" text="✕" class="history-close" @tap="closeHistoryModal" />
+        </GridLayout>
+
+        <ScrollView row="1">
+          <StackLayout class="history-list">
+            <StackLayout
+              v-for="item in expenseHistoryItems"
+              :key="item.id"
+              class="history-item"
+            >
+              <GridLayout columns="*, auto">
+                <Label col="0" :text="item.description" class="history-item-title" />
+                <Label col="1" :text="`${formatMoney(item.amount)} ₽`" class="history-item-amount" />
+              </GridLayout>
+
+              <Label :text="item.date" class="history-item-date" />
+              <Label :text="`Плательщик: ${item.payerName}`" class="history-item-payer" />
+
+              <StackLayout v-if="item.allocations.length > 0" class="history-allocations">
+                <Label text="Оплачено за:" class="history-alloc-title" />
+                <GridLayout
+                  v-for="alloc in item.allocations"
+                  :key="`${item.id}-${alloc.userId}`"
+                  columns="*, auto"
+                  class="history-alloc-row"
+                >
+                  <Label col="0" :text="alloc.userName" class="history-alloc-user" />
+                  <Label col="1" :text="`${formatMoney(alloc.amount)} ₽`" class="history-alloc-amount" />
+                </GridLayout>
+              </StackLayout>
+            </StackLayout>
+
+            <Label
+              v-if="expenseHistoryItems.length === 0"
+              text="Расходов пока нет"
+              class="history-empty"
+            />
+          </StackLayout>
+        </ScrollView>
+      </GridLayout>
     </GridLayout>
 
+    <GridLayout v-if="showAddExpenseModal" class="modal-root" row="0" rowSpan="2">
+      <GridLayout rows="auto, *" class="history-modal" @tap="onHistoryModalTap">
+        <GridLayout columns="*, auto" class="history-header">
+          <Label col="0" text="Добавить расход" class="history-title" />
+          <Label col="1" text="✕" class="history-close" @tap="closeAddExpenseModal" />
+        </GridLayout>
 
+        <ScrollView row="1">
+          <StackLayout class="history-list">
+            <TextField v-model="newExpenseDescription" hint="Описание расхода" class="input" />
+            <TextField v-model="newExpenseAmount" hint="Сумма" keyboardType="number" class="input" />
 
-    <!-- Диалог редактирования бюджета категории -->
-    <EditCategoryBudgetDialog
-      v-if="showBudgetDialog"
-      :tripId="tripId"
-      :category="selectedCategory"
-      :currentBudget="selectedCategoryBudget"
-      @close="closeBudgetDialog"
-      @saved="onBudgetSaved"
-    />
+            <Label text="Категория" class="history-alloc-title" />
+            <DropDown
+              :items="categoryNames"
+              :selectedIndex="selectedCategoryIndex"
+              @selectedIndexChanged="onCategoryChange"
+              class="dropdown"
+            />
+
+            <Label text="Кто оплатил" class="history-alloc-title" />
+            <DropDown
+              :items="payerNames"
+              :selectedIndex="selectedPayerIndex"
+              @selectedIndexChanged="onPayerChange"
+              class="dropdown"
+            />
+
+            <Label text="За кого (необязательно)" class="history-alloc-title" />
+            <StackLayout class="participants-wrapper">
+              <GridLayout
+                v-for="participant in participants"
+                :key="participant.member_id"
+                columns="auto, *"
+                class="participant-row"
+                @tap="toggleParticipant(participant.member_id)"
+              >
+                <Label
+                  col="0"
+                  :text="selectedParticipants[participant.member_id] ? '☑️' : '⬜'"
+                  class="checkbox"
+                />
+                <Label col="1" :text="getUserName(participant.member_id)" class="participant-name" />
+              </GridLayout>
+            </StackLayout>
+
+            <Label v-if="addExpenseError" :text="addExpenseError" class="error" />
+
+            <Button text="Добавить расход" class="btn-primary" @tap="submitNewExpense" />
+          </StackLayout>
+        </ScrollView>
+      </GridLayout>
+    </GridLayout>
+    </GridLayout>
   </Page>
 </template>
 
@@ -164,7 +217,6 @@ import { useTripStore } from '~/stores/tripStore'
 import { useTripMemberStore } from '~/stores/tripMemberStore'
 import { useExpenseStore } from '~/stores/expenseStore'
 import { useExpenseTypeStore } from '~/stores/expenseTypeStore'
-import { useTripBudgetCategoryStore } from '~/stores/tripBudgetCategoryStore'
 import { useUserStore } from '~/stores/userStore'
 import { useCurrencyStore } from '~/stores/currencyStore'
 import type { Trip } from '~/models/trip'
@@ -176,6 +228,7 @@ import ExpenseDetails from './ExpenseDetails.vue'
 import DebtsWidget from '~/components/DebtsWidget.vue'
 import { createScreenLoadMachine, modalMachine } from '~/machines/uiMachines'
 import { GridLayout, Label, StackLayout, confirm } from '@nativescript/core'
+import type { SelectedIndexChangedEventData } from 'nativescript-drop-down'
 
 const props = defineProps<{
   tripId: number
@@ -185,7 +238,6 @@ const tripStore = useTripStore()
 const tripMemberStore = useTripMemberStore()
 const expenseStore = useExpenseStore()
 const expenseTypeStore = useExpenseTypeStore()
-const budgetCategoryStore = useTripBudgetCategoryStore()
 const userStore = useUserStore()
 const currencyStore = useCurrencyStore()
 
@@ -199,6 +251,14 @@ const showBudgetDialog = computed(() => budgetModalSnapshot.value.matches('opene
 const selectedCategory = ref<ExpenseType | null>(null)
 const selectedCategoryBudget = ref(0)
 const currentUserId = computed(() => userStore.currentUserId)
+const showHistoryModal = ref(false)
+const showAddExpenseModal = ref(false)
+const newExpenseDescription = ref('')
+const newExpenseAmount = ref('')
+const selectedCategoryId = ref<number | null>(null)
+const selectedPayerId = ref<number | null>(null)
+const selectedParticipants = ref<Record<number, boolean>>({})
+const addExpenseError = ref('')
 
 onMounted(() => {
   loadTrip()
@@ -213,7 +273,6 @@ const loadTrip = async () => {
       return
     }
     void Promise.all([
-      budgetCategoryStore.loadTripBudgetCategories(props.tripId),
       tripMemberStore.loadTripMembersByTripId(props.tripId),
       expenseStore.loadAll(),
       expenseTypeStore.loadExpenseTypes()
@@ -232,6 +291,12 @@ const retryTripLoad = () => {
 }
 
 // Основная информация
+const formatMoney = (value: number): string => {
+  const safe = Number.isFinite(value) ? value : 0
+  return Math.round(safe).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
+
+// Заголовок
 const formattedDates = computed(() => {
   if (!trip.value) return ''
   const start = new Date(trip.value.startDate).toLocaleDateString('ru-RU')
@@ -239,17 +304,7 @@ const formattedDates = computed(() => {
   return `${start} — ${end}`
 })
 
-const formattedBudget = computed(() => {
-  if (!trip.value) return ''
-  return `${trip.value.budget.toLocaleString('ru-RU')} ${currencySymbol.value}`
-})
-
-const currencySymbol = computed(() => {
-  const currencyId = trip.value?.currency_id
-  if (!currencyId) return '₽'
-  return currencyStore.currencies.find(c => c.id === currencyId)?.symbol || '₽'
-})
-
+// Участники
 const participantsCount = computed(() => {
   if (!trip.value) return 0
   return tripMemberStore.getTripMembersByTripId(trip.value.id).length
@@ -270,145 +325,188 @@ const particapantsAvatar = computed(() => {
   })
 })
 
-// Бюджет
+// Расходы
 const totalBudget = computed(() => trip.value?.budget || 0)
-const totalExpenses = computed(() => {
-  return expenseStore.getTotalExpensesByTripId(props.tripId)
-})
-
-const remainingBudget = computed(() => {
-  return totalBudget.value - totalExpenses.value
-})
-
-const usagePercentage = computed(() => {
-  return totalBudget.value === 0 ? 0 : (totalExpenses.value / totalBudget.value) * 100
-})
-
-// Категории
+const totalExpenses = computed(() => expenseStore.getTotalExpensesByTripId(props.tripId))
 const allCategories = computed(() => expenseTypeStore.getAllExpenseTypes())
 
-// Бюджеты по категориям
-const categoryBudgetMap = computed(() => {
-  const map: Record<number, number> = {}
-  allCategories.value.forEach(cat => {
-    const budget = budgetCategoryStore.getBudgetCategory(props.tripId, cat.id)
-    if (budget) {
-      map[cat.id] = budget.planned_amount
-    }
+const categorySpendList = computed(() => {
+  return allCategories.value.map(category => ({
+    id: category.id,
+    name: category.name,
+    emoji: category.icon,
+    spent: expenseStore.getTotalByCategory(props.tripId, category.id)
+  }))
+})
+
+const unallocatedFunds = computed(() => {
+  const remaining = Number(totalBudget.value) - totalExpenses.value
+  return remaining > 0 ? remaining : 0
+})
+
+const participants = computed(() => tripMemberStore.getTripMembersByTripId(props.tripId))
+const categoryNames = computed(() => allCategories.value.map(c => c.name))
+const payerNames = computed(() => participants.value.map(p => getUserName(p.member_id)))
+
+const selectedCategoryIndex = computed(() => {
+  if (!selectedCategoryId.value) return 0
+  const index = allCategories.value.findIndex(c => c.id === selectedCategoryId.value)
+  return index >= 0 ? index : 0
+})
+
+const selectedPayerIndex = computed(() => {
+  if (!selectedPayerId.value) return 0
+  const index = participants.value.findIndex(p => p.member_id === selectedPayerId.value)
+  return index >= 0 ? index : 0
+})
+
+const getUserDisplayName = (userId: number) => {
+  const user = userStore.getUserById(userId)
+  if (!user) return `Пользователь ${userId}`
+  return `${user.first_name} ${user.last_name}`
+}
+
+const getUserName = (userId: number) => {
+  const user = userStore.getUserById(userId)
+  if (!user) return `Пользователь ${userId}`
+  return `${user.first_name} ${user.last_name}`
+}
+
+const formatExpenseDate = (value: string) =>
+  new Date(value).toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
   })
-  return map
+
+const expenseHistoryItems = computed(() => {
+  return expenseStore
+    .getExpensesByTripId(props.tripId)
+    .slice()
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map(expense => {
+      const allocations = expenseStore
+        .getAllocationsByExpenseId(expense.id)
+        .filter(allocation => allocation.user_id !== expense.user_id_pay && allocation.amount > 0)
+        .map(allocation => ({
+          userId: allocation.user_id,
+          userName: getUserDisplayName(allocation.user_id),
+          amount: allocation.amount
+        }))
+
+      return {
+        id: expense.id,
+        date: formatExpenseDate(expense.date),
+        payerName: getUserDisplayName(expense.user_id_pay),
+        description: expense.description?.trim() || 'Без описания',
+        amount: expense.amount,
+        allocations
+      }
+    })
 })
 
-// Расходы по категориям
-const categorySpentMap = computed(() => {
-  const map: Record<number, number> = {}
-  allCategories.value.forEach(cat => {
-    const spent = expenseStore.getTotalByCategory(props.tripId, cat.id)
-    if (spent > 0) {
-      map[cat.id] = spent
-    }
-  })
-  return map
-})
-
-// Категории с указанным бюджетом
-const categoriesWithBudget = computed(() => {
-  return allCategories.value.filter(cat => categoryBudgetMap.value[cat.id])
-})
-
-const getCategoryEmoji = (categoryName: string): string => {
-  const emojis: Record<string, string> = {
-    'Билеты': '✈️',
-    'Отели': '🏨',
-    'Питание': '🍜',
-    'Развлечения': '🎉',
-    'Страховка': '🛡️',
-    'Другое': '📝'
-  }
-  return emojis[categoryName] || '💰'
+const openHistoryModal = () => {
+  showHistoryModal.value = true
 }
 
-const getCategoryPercentage = (categoryId: number) => {
-  const budget = categoryBudgetMap.value[categoryId] || 0
-  const spent = categorySpentMap.value[categoryId] || 0
-  if (budget === 0) return 0
-  return (spent / budget) * 100
+const closeHistoryModal = () => {
+  showHistoryModal.value = false
 }
 
-const editCategoryBudget = (category: ExpenseType) => {
-  if (!categoryBudgetMap.value[category.id]) return
-  selectedCategory.value = category
-  selectedCategoryBudget.value = categoryBudgetMap.value[category.id] || 0
-  sendBudgetModalEvent({ type: 'OPEN' })
-}
-
-const showEditBudgetDialog = () => {
-  // TODO: показать диалог для редактирования общего бюджета
-  console.log('Редактировать общий бюджет')
-}
-
-const onBudgetSaved = () => {
-  sendBudgetModalEvent({ type: 'CLOSE' })
-  // Данные обновятся автоматически через computed
-}
-
-// Расходы (последние 5)
-const closeBudgetDialog = () => {
-  sendBudgetModalEvent({ type: 'CLOSE' })
-}
-
-const recentExpenses = computed(() => {
-  const allExpenses = expenseStore.getExpensesByTripId(props.tripId)
-  return [...allExpenses].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  ).slice(0, 5)
-})
-
-// Действия
-const onEdit = () => {
-  console.log('Редактировать:', trip.value?.id)
-}
-
-const onDelete = async () => {
-  if (trip.value) {
-    // Ждем, пока пользователь нажмет "ОК" или "Отмена"
-    const result = await confirm({
-      title: "Удаление поездки",
-      message: "Вы уверены, что хотите удалить эту поездку? Это действие нельзя отменить.",
-      okButtonText: "Удалить",
-      cancelButtonText: "Отмена"
-    });
-
-    // Если пользователь нажал "Удалить" (result === true)
-    if (result) {
-      tripStore.deleteTrip(trip.value.id);
-      $navigateBack();
-    }
-  }
+const onHistoryModalTap = () => {
 }
 
 const showAddExpense = () => {
-  $navigateTo(AddExpenseDialog, {
-    props: {
-      tripId: props.tripId
-    }
-  })
+  if (!selectedCategoryId.value && allCategories.value.length > 0) {
+    selectedCategoryId.value = allCategories.value[0].id
+  }
+  if (!selectedPayerId.value && participants.value.length > 0) {
+    selectedPayerId.value = participants.value[0].member_id
+  }
+  addExpenseError.value = ''
+  showAddExpenseModal.value = true
 }
 
-const openExpenseDetails = (expenseId: number) => {
-  $navigateTo(ExpenseDetails, {
-    props: {
-      expenseId: expenseId,
-      tripId: props.tripId
-    }
+const closeAddExpenseModal = () => {
+  showAddExpenseModal.value = false
+}
+
+const onCategoryChange = (args: SelectedIndexChangedEventData) => {
+  const index = args.newIndex
+  if (index >= 0 && allCategories.value[index]) {
+    selectedCategoryId.value = allCategories.value[index].id
+  }
+}
+
+const onPayerChange = (args: SelectedIndexChangedEventData) => {
+  const index = args.newIndex
+  if (index >= 0 && participants.value[index]) {
+    selectedPayerId.value = participants.value[index].member_id
+  }
+}
+
+const toggleParticipant = (userId: number) => {
+  selectedParticipants.value[userId] = !selectedParticipants.value[userId]
+}
+
+const submitNewExpense = async () => {
+  addExpenseError.value = ''
+
+  if (!newExpenseDescription.value.trim() || !newExpenseAmount.value.trim() || !selectedCategoryId.value || !selectedPayerId.value) {
+    addExpenseError.value = 'Заполните описание, сумму, категорию и плательщика'
+    return
+  }
+
+  const amount = Number(newExpenseAmount.value)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    addExpenseError.value = 'Сумма должна быть больше 0'
+    return
+  }
+
+  if (amount > unallocatedFunds.value) {
+    addExpenseError.value = `Сумма не должна превышать остаток ${formatMoney(unallocatedFunds.value)} ₽`
+    return
+  }
+
+  const expenseId = await expenseStore.addExpense({
+    trip_id: props.tripId,
+    description: newExpenseDescription.value.trim(),
+    amount,
+    type_of_expense: selectedCategoryId.value,
+    user_id_pay: selectedPayerId.value,
+    date: new Date().toISOString().split('T')[0],
+    currency_id: 1
   })
+
+  const selectedUserIds = Object.entries(selectedParticipants.value)
+    .filter(([, selected]) => selected)
+    .map(([id]) => Number(id))
+
+  if (selectedUserIds.length > 0) {
+    const amountPerPerson = amount / selectedUserIds.length
+    for (const userId of selectedUserIds) {
+      await expenseStore.addExpenseAllocation({
+        expense_id: expenseId,
+        user_id: userId,
+        amount: amountPerPerson
+      })
+    }
+  }
+
+  newExpenseDescription.value = ''
+  newExpenseAmount.value = ''
+  selectedParticipants.value = {}
+  closeAddExpenseModal()
 }
 
 </script>
 
 <style scoped>
+
+/* Прочее */
+
 .p-4 {
-  padding: 0;
+  margin: 0;
 }
 
 .hidden {
@@ -416,303 +514,244 @@ const openExpenseDetails = (expenseId: number) => {
   visibility: collapse;
 }
 
-.screen-state {
-  align-items: center;
-  justify-content: center;
-  padding: 40 24;
-}
+/* Текст */
 
-.screen-state-text {
-  margin-top: 12;
-  font-size: 16;
-  color: #6F7071;
-}
-
-.screen-state-error {
-  margin-bottom: 16;
-  font-size: 14;
-  color: #ef4444;
-  text-align: center;
-}
-
-
-
-.trip-title {
-  font-family: "Inter";
+.title {
+  font-family: "Inter", "Inter-Regular", "Inter-Bold";
   font-size: 20;
   font-weight: bold;
   color: #313132;
 }
 
-.trip-title2 {
-  font-family: "Inter";
+.title2 {
+  font-family: "Inter", "Inter-Regular", "Inter-Bold";
   font-size: 36;
   font-weight: bold;
   color: #313132;
 }
 
-.trip-title3 {
-  font-family: "Inter";
+.title3 {
+  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
   font-size: 20;
-  font-weight: 300;
   color: #6F7071;
 }
 
-.particapantsmain {
+.title4 {
+  font-family: "Inter", "Inter-Regular", "Inter-Bold", "Inter-Light";
+  font-size: 16;
+  color: #313132;
+}
+
+/* Секция участники */
+
+.participants_section {
   margin-top: 32;
+  padding-bottom: 20;
   padding-top: 20;
   padding-left: 24;
   background-color: white;
   border-radius: 24;
-  elevation: 8;
   width: 354;
-  height: 120;
-  shadow-radius: 8; /* iOS */
-  shadow-color: #000000;
-  shadow-opacity: 0.5;
-  shadow-offset-width: 0;
-  shadow-offset-height: 4;
+  height: 130;
 }
 
 .particapants-image {
-  margin-right: 8;
-  width: 80;
-  height: 80;
+  margin-right: 12;
+  width: 90;
+  height: 90;
   border-radius: 24;
 }
 
-/* Расходы */
-.expenses-section {
+/* Секция расходы */
+
+.expenses_section {
   margin-top: 32;
   padding: 24;
+  padding-bottom: 24;
   background-color: white;
   border-radius: 24;
-  elevation: 8;
   width: 354;
-  shadow-radius: 8; /* iOS */
-  shadow-color: #000000;
-  shadow-opacity: 0.5;
-  shadow-offset-width: 0;
-  shadow-offset-height: 4;
+  height: auto;
 }
 
-.categories-budget {
-  margin-top: 32;
-  width: 306;
+.category-row {
+  padding-left: 12;
+  padding-right: 12;
+  border-bottom-width: 1;
+  border-bottom-color: #D3D3D3;
 }
 
+/* Кнопки */
 
-
-
-
-
-
-
-
-
-
-
-
-
-.budget-header {
-  margin-bottom: 16;
-  align-items: center;
-  flex-direction: row;
-  justify-content: space-between;
+.btn-hist {
+  width: 354;
+  height: 60;
+  border-radius: 14;
+  background-color: #FFF7CF;
 }
 
-.edit-budget-btn {
-  background-color: transparent;
-  color: #3b82f6;
-  font-size: 12;
-  padding: 6 12;
-  border-width: 0;
+.btn-exp {
+  width: 354;
+  height: 60;
+  border-radius: 14;
+  background-color: #FFDD2D;
+}
+
+.modal-root {
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  
+}
+
+.history-modal {
+  vertical-align: middle;
+  horizontal-align: center;
+  width: 354;
+  margin-top: 70;
+  margin-bottom: 24;
+  background-color: #FFFFFF;
   border-radius: 16;
-  height: 32;
+  padding: 16;
 }
 
-.section-title {
+.history-header {
+  padding-bottom: 10;
+  border-bottom-width: 1;
+  border-bottom-color: #E5E7EB;
+}
+
+.history-title {
+  font-size: 20;
+  font-weight: 700;
+  color: #111827;
+}
+
+.history-close {
+  font-size: 24;
+  color: #6B7280;
+  padding-left: 12;
+}
+
+.history-list {
+  padding-top: 8;
+}
+
+.history-item {
+  border-width: 1;
+  border-color: #E5E7EB;
+  border-radius: 12;
+  padding: 12;
+  margin-bottom: 10;
+}
+
+.history-item-title {
   font-size: 16;
   font-weight: 600;
-  color: #1f2937;
+  color: #111827;
 }
 
-.budget-stats {
-  margin-bottom: 16;
+.history-item-amount {
+  font-size: 16;
+  font-weight: 700;
+  color: #111827;
 }
 
-.stat-card {
-  padding: 12;
-  background-color: #f9fafb;
-  border-radius: 12;
-  margin: 4;
+.history-item-date {
+  margin-top: 6;
+  font-size: 13;
+  color: #6B7280;
 }
 
-.stat-label {
+.history-item-payer {
+  margin-top: 2;
+  font-size: 13;
+  color: #374151;
+}
+
+.history-allocations {
+  margin-top: 8;
+  padding-top: 8;
+  border-top-width: 1;
+  border-top-color: #F3F4F6;
+}
+
+.history-alloc-title {
   font-size: 12;
-  color: #6b7280;
+  color: #6B7280;
   margin-bottom: 4;
 }
 
-.stat-value {
-  font-size: 18;
-  font-weight: bold;
-  color: #1f2937;
+.history-alloc-row {
+  padding-top: 3;
+  padding-bottom: 3;
 }
 
-.stat-value.positive {
-  color: #10b981;
-}
-
-.stat-value.negative {
-  color: #ef4444;
-}
-
-.budget-progress {
-  margin-top: 8;
-  height: 8;
-  border-radius: 4;
-  background-color: #e5e7eb;
-}
-
-/* Бюджет по категориям */
-
-
-.categories-title {
-  font-size: 14;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 12;
-}
-
-.category-budget-item {
-  padding: 12;
-  background-color: #f9fafb;
-  border-radius: 12;
-  margin-bottom: 8;
-}
-
-.category-emoji {
-  font-size: 18;
-  margin-right: 12;
-  width: 32;
-}
-
-.category-name {
-  font-size: 14;
-  font-weight: 500;
+.history-alloc-user {
+  font-size: 13;
   color: #374151;
 }
 
-.category-amount {
-  font-size: 14;
-  font-weight: 600;
-  color: #3b82f6;
+.history-alloc-amount {
+  font-size: 13;
+  color: #111827;
 }
 
-.category-amount.no-budget {
-  color: #9ca3af;
-  font-weight: normal;
-}
-
-.category-progress {
-  margin-top: 8;
-  height: 4;
-  border-radius: 2;
-  background-color: #e5e7eb;
-}
-
-.category-spent {
-  font-size: 10;
-  color: #6b7280;
-  margin-top: 4;
-}
-
-/* Расходы */
-
-.section-header {
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16;
-  padding-bottom: 8;
-  border-bottom-width: 1;
-  border-bottom-color: #e5e7eb;
-}
-
-.add-expense-btn {
-  background-color: #3b82f6;
-  color: white;
-  font-size: 12;
-  padding: 6 12;
-  border-radius: 20;
-  border-width: 0;
-  height: 32;
-}
-
-.expenses-list {
-  margin-top: 8;
-}
-
-/* Карточки расходов */
-.expenses-list > * {
-  margin-bottom: 12;
-}
-
-.empty-expenses {
-  align-items: center;
-  padding: 40;
-  background-color: #f9fafb;
-  border-radius: 12;
-  margin-top: 8;
-}
-
-.empty-icon {
-  font-size: 48;
-  margin-bottom: 12;
-}
-
-.empty-text {
-  font-size: 14;
-  color: #9ca3af;
-  margin-bottom: 12;
+.history-empty {
   text-align: center;
+  color: #9CA3AF;
+  margin-top: 20;
 }
 
-.btn-add {
-  background-color: #3b82f6;
-  color: white;
-  padding: 10 20;
-  border-radius: 8;
-  font-size: 14;
-}
-
-/* Кнопки действий */
-.actions {
-  margin-top: 16;
-  margin-bottom: 16;
-  gap: 12;
-}
-
-.btn-primary {
-  background-color: #3b82f6;
-  color: white;
-  padding: 12 20;
-  border-radius: 10;
-  font-size: 14;
-  font-weight: 500;
-}
-
-.btn-outline {
-  background-color: transparent;
+.input {
   border-width: 1;
-  border-color: #ef4444;
-  color: #ef4444;
-  padding: 12 20;
-  border-radius: 10;
+  border-color: #d1d5db;
+  border-radius: 8;
+  padding: 12;
+  margin-bottom: 12;
   font-size: 14;
-  font-weight: 500;
 }
+
+.dropdown {
+  border-width: 1;
+  border-color: #d1d5db;
+  border-radius: 8;
+  margin-bottom: 12;
+  height: 44;
+  padding: 4 8;
+  background-color: white;
+}
+
+.participants-wrapper {
+  margin-top: 4;
+  border-width: 1;
+  border-color: #f3f4f6;
+  border-radius: 8;
+  padding: 4;
+  margin-bottom: 12;
+}
+
+.participant-row {
+  padding: 10;
+  border-bottom-width: 1;
+  border-bottom-color: #f3f4f6;
+}
+
+.checkbox {
+  font-size: 18;
+  margin-right: 10;
+  width: 28;
+}
+
+.participant-name {
+  font-size: 14;
+  color: #374151;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 12;
+  margin-bottom: 10;
+}
+
 </style>
-
-
