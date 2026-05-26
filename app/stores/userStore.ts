@@ -19,6 +19,7 @@ export const useUserStore = defineStore('user', () => {
   const isSyncingUsers = ref(false)
 
   let messagingInstance: Messaging | null = null
+  let lastSyncedFcmToken: string | null = null
 
   async function loadUsers() {
     if (isSyncingUsers.value) return
@@ -27,7 +28,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       users.value = await fetchUsers()
     } catch (error) {
-      console.warn('[UserStore] не удалось загрузить пользователей', error)
+      console.warn('[UserStore] failed to load users', error)
     } finally {
       isSyncingUsers.value = false
     }
@@ -38,37 +39,50 @@ export const useUserStore = defineStore('user', () => {
   }
   init()
 
+  async function syncFcmToken(token: string) {
+    if (!currentUserId.value || !token) return
+    if (lastSyncedFcmToken === token) return
+
+    try {
+      await updateUser(currentUserId.value, { fcmToken: token })
+      lastSyncedFcmToken = token
+      console.log('FCM token synced')
+    } catch (e) {
+      console.error('Failed to sync FCM token', e)
+    }
+  }
+
   function initFirebaseMessaging() {
     if (messagingInstance) return
 
     messagingInstance = new Messaging()
     const notificationStore = useNotificationStore()
 
-    // Разрешение
-    messagingInstance.requestPermission()
-      .then(() => console.log('🔔 Разрешение на уведомления получено'))
-      .catch(() => console.log('❌ Разрешение отклонено'))
+    messagingInstance
+      .requestPermission()
+      .then(async () => {
+        console.log('Notification permission granted')
+        try {
+          const token = await messagingInstance?.getToken()
+          if (token) {
+            console.log('FCM TOKEN (getToken):', token)
+            await syncFcmToken(token)
+          } else {
+            console.warn('getToken returned empty value')
+          }
+        } catch (e) {
+          console.error('getToken failed', e)
+        }
+      })
+      .catch(() => console.log('Notification permission denied'))
 
-    // FCM TOKEN
     messagingInstance.onToken(async (token) => {
-      console.log('🔥 FCM TOKEN:', token)
-
-      if (!currentUserId.value) return
-
-      try {
-        await updateUser(currentUserId.value, {
-          push_token: token
-        } as any)
-
-        console.log('✅ Токен отправлен на сервер')
-      } catch (e) {
-        console.error('❌ Ошибка отправки токена', e)
-      }
+      console.log('FCM TOKEN:', token)
+      await syncFcmToken(token)
     })
 
-    // PUSH ПРИШЕЛ (foreground)
     messagingInstance.onMessage((message) => {
-      console.log('📩 PUSH:', message)
+      console.log('PUSH:', message)
 
       try {
         const data = message?.data || {}
@@ -82,7 +96,7 @@ export const useUserStore = defineStore('user', () => {
         ] as const
 
         const type = allowedTypes.includes(data.type as any)
-          ? (data.type as typeof allowedTypes[number])
+          ? (data.type as (typeof allowedTypes)[number])
           : 'reminder'
 
         const notification = {
@@ -90,46 +104,38 @@ export const useUserStore = defineStore('user', () => {
           trip_id: Number(data.trip_id) || 0,
           user_id: Number(data.user_id) || 0,
           type,
-          message:
-            data.body ||
-            message.notification?.body ||
-            'Новое уведомление',
+          message: data.body || message.notification?.body || 'Новое уведомление',
           is_read: false,
           created_at: new Date().toISOString()
         }
 
         notificationStore.addLocalNotification(notification)
 
-        // 🔄 синхронизация с сервером
         if (currentUserId.value) {
-          notificationStore.loadNotificationsByUserId(currentUserId.value)
+          void notificationStore.loadNotificationsByUserId(currentUserId.value)
         }
-
       } catch (e) {
-        console.error('❌ Ошибка обработки push', e)
+        console.error('Push handling failed', e)
       }
     })
 
-    // 👉 КЛИК ПО PUSH
     messagingInstance.onNotificationTap((message) => {
-      console.log('👆 Нажали push:', message)
-
-      // тут потом можно открыть TripDetails
+      console.log('Push tapped:', message)
     })
   }
 
   const getAllUsers = () => users.value
 
   const getUserById = (id: number): User | null => {
-    return users.value.find(user => user.id === id) || null
+    return users.value.find((user) => user.id === id) || null
   }
 
   const getUserByPhoneNumber = (phone: string): User | null => {
-    return users.value.find(user => user.phone_number === phone) || null
+    return users.value.find((user) => user.phone_number === phone) || null
   }
 
   const getUsersByIds = (ids: number[]): User[] => {
-    return users.value.filter(user => ids.includes(user.id))
+    return users.value.filter((user) => ids.includes(user.id))
   }
 
   const isAuthenticated = computed(() => currentUserId.value !== null)
@@ -141,6 +147,9 @@ export const useUserStore = defineStore('user', () => {
 
   const setCurrentUser = (userId: number | null) => {
     currentUserId.value = userId
+    if (userId) {
+      initFirebaseMessaging()
+    }
   }
 
   const loginWithCredentials = async (payload: {
@@ -155,11 +164,10 @@ export const useUserStore = defineStore('user', () => {
     const user = await loginUser(phone, firstName, lastName)
     currentUserId.value = user.id
 
-    if (!users.value.some(u => u.id === user.id)) {
+    if (!users.value.some((u) => u.id === user.id)) {
       users.value.push(user)
     }
 
-    // 🚀 включаем push
     initFirebaseMessaging()
 
     return user
@@ -167,6 +175,7 @@ export const useUserStore = defineStore('user', () => {
 
   const logout = () => {
     currentUserId.value = null
+    lastSyncedFcmToken = null
   }
 
   async function addUser(user: UserCreatePayload) {
@@ -178,7 +187,7 @@ export const useUserStore = defineStore('user', () => {
   async function updateUser(id: number, updates: UserUpdatePayload) {
     const updated = await updateUserApi(id, updates)
 
-    const index = users.value.findIndex(u => u.id === id)
+    const index = users.value.findIndex((u) => u.id === id)
     if (index !== -1) {
       users.value[index] = updated
     } else {

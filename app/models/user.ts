@@ -3,5 +3,6 @@ export interface User {
   first_name: string
   last_name: string
   phone_number: string
-  avatar?: string 
-} // Это будет еще меняться
+  avatar?: string
+  fcm_token?: string
+}

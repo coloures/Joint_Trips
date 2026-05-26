@@ -7,6 +7,7 @@ export interface UserDto {
   last_name: string
   phone_number: string
   avatar?: string
+  fcm_token?: string
 }
 
 export type AvatarDto = string | null
@@ -23,6 +24,7 @@ export interface UserUpdatePayload {
   lastName?: string
   phoneNumber?: string
   avatar?: string
+  fcmToken?: string
 }
 
 interface UserCreateDto {
@@ -37,6 +39,7 @@ interface UserUpdateDto {
   last_name?: string
   phone_number?: string
   avatar?: string
+  fcm_token?: string
 }
 
 export const normalizeUser = (dto: UserDto): User => ({
@@ -56,6 +59,7 @@ const toUserUpdateDto = (payload: UserUpdatePayload): UserUpdateDto => {
   if (payload.lastName !== undefined) dto.last_name = payload.lastName
   if (payload.phoneNumber !== undefined) dto.phone_number = payload.phoneNumber
   if (payload.avatar !== undefined) dto.avatar = payload.avatar
+  if (payload.fcmToken !== undefined) dto.fcm_token = payload.fcmToken
   return dto
 }
 
