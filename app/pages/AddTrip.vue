@@ -439,7 +439,7 @@ const onCancel = async () => {
 }
 
 .emoji.active {
-  background-color: #3b82f6;
+  background-color: #FFDD2D;
 }
 
 .hint {
@@ -453,7 +453,7 @@ const onCancel = async () => {
 }
 
 .btn-primary {
-  background-color: #3b82f6;
+  background-color: #FFDD2D;
   color: white;
   padding: 14 24;
   border-radius: 10;
